@@ -26,38 +26,48 @@ data = [
     },
 ]
 
-for c in string.printable:
-    if not c.strip():
-        continue
 
+def add_key(char, c):
+    global data
     data += [
         {
             "keys": [shortcut_previous, c],
             "command": "select_next_char",
-            "args": {
-                "char": c,
-                "direction": "previous",
-            },
+            "args": {"char": char, "direction": "previous"},
         },
         {
             "keys": [shortcut_next, c],
             "command": "select_next_char",
-            "args": {"char": c},
+            "args": {"char": char},
         },
         {
             "keys": [shortcut_previous, "shift", c],
             "command": "select_next_char",
-            "args": {
-                "char": c,
-                "direction": "previous",
-            },
+            "args": {"char": char, "direction": "previous"},
         },
         {
             "keys": [shortcut_next, "shift", c],
             "command": "select_next_char",
-            "args": {"char": c},
+            "args": {"char": char},
         },
     ]
+
+
+for c in string.printable:
+    if c.strip():
+        add_key(c, c)
+
+for key, char in [
+    ("keypad_plus", "+"),
+    ("keypad_multiply", "*"),
+    ("keypad_minus", "-"),
+    ("keypad_divide", "/"),
+]:
+    # sublime.log_input(True)
+    add_key(char, key)
+
+for i in range(10):
+    add_key(str(i), "keypad" + str(i))
 
 for filename in filenames:
     with open(filename, "w") as file:
