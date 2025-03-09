@@ -7,8 +7,11 @@ filenames = [
     "Default (Windows).sublime-keymap",
 ]
 
-shortcut_previous = "alt+ctrl+shift+super+1"
-shortcut_next = "alt+ctrl+shift+super+2"
+shortcut_previous = "alt+ctrl+super+3"
+shortcut_next = "alt+ctrl+super+4"
+
+shortcut_previous_extend = "shift+ctrl+alt+super+3"
+shortcut_next_extend = "shift+ctrl+alt+super+4"
 
 # Select the next / previous selection
 shortcut_previous_selection = "alt+ctrl+super+1"
@@ -29,28 +32,32 @@ data = [
 
 def add_key(char, c):
     global data
-    data += [
-        {
-            "keys": [shortcut_previous, c],
-            "command": "select_next_char",
-            "args": {"char": char, "direction": "previous"},
-        },
-        {
-            "keys": [shortcut_next, c],
-            "command": "select_next_char",
-            "args": {"char": char},
-        },
-        {
-            "keys": [shortcut_previous, "shift", c],
-            "command": "select_next_char",
-            "args": {"char": char, "direction": "previous"},
-        },
-        {
-            "keys": [shortcut_next, "shift", c],
-            "command": "select_next_char",
-            "args": {"char": char},
-        },
-    ]
+    for previous, next, extend in (
+        (shortcut_previous, shortcut_next, False),
+        (shortcut_previous_extend, shortcut_next_extend, True),
+    ):
+        data += [
+            {
+                "keys": [previous, c],
+                "command": "select_next_char",
+                "args": {"char": char, "direction": "previous", "extend": extend},
+            },
+            {
+                "keys": [next, c],
+                "command": "select_next_char",
+                "args": {"char": char, "extend": extend},
+            },
+            {
+                "keys": [previous, "shift", c],
+                "command": "select_next_char",
+                "args": {"char": char, "direction": "previous", "extend": extend},
+            },
+            {
+                "keys": [next, "shift", c],
+                "command": "select_next_char",
+                "args": {"char": char, "extend": extend},
+            },
+        ]
 
 
 for c in string.printable:

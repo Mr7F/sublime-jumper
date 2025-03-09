@@ -2,7 +2,7 @@ import sublime, sublime_plugin, re
 from itertools import chain
 
 
-def _select_next(view, selection, direction, char):
+def _select_next(view, selection, direction, char, extend=False):
     a, b = sorted(selection.to_tuple())
 
     if char in "'\"":
@@ -34,14 +34,19 @@ def _select_next(view, selection, direction, char):
             target_idx = idx - char_idx - 1
 
         view.sel().subtract(selection)
-        view.sel().add(sublime.Region(target_idx, target_idx + 1))
+        end_target = target_idx + 1
+        if extend:
+            target_idx = min(target_idx, a)
+            end_target = max(end_target, b)
+
+        view.sel().add(sublime.Region(target_idx, end_target))
         break
 
 
 class SelectNextCharCommand(sublime_plugin.TextCommand):
-    def run(self, edit, char, direction="next"):
+    def run(self, edit, char, direction="next", extend=False):
         for selection in list(self.view.sel()):
-            _select_next(self.view, selection, direction, char)
+            _select_next(self.view, selection, direction, char, extend)
 
         selections = self.view.sel()
         if len(selections) == 1:
