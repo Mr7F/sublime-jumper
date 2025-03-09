@@ -7,12 +7,12 @@ filenames = [
     "Default (Windows).sublime-keymap",
 ]
 
-shortcut_previous = "alt+ctrl+super+1"
-shortcut_next = "alt+ctrl+super+2"
+shortcut_previous = "alt+ctrl+shift+super+1"
+shortcut_next = "alt+ctrl+shift+super+2"
 
 # Select the next / previous selection
-shortcut_previous_selection = "alt+ctrl+shift+super+1"
-shortcut_next_selection = "alt+ctrl+shift+super+2"
+shortcut_previous_selection = "alt+ctrl+super+1"
+shortcut_next_selection = "alt+ctrl+super+2"
 
 data = [
     {
