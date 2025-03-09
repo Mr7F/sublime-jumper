@@ -2,3 +2,5 @@
 Press a shortcut, then a key to select the next / previous char corresponding to the key pressed.
 
 Because of the way shortcut work in sublime, you need to run `create_keybind.py` in order to generate the shortcut file.
+
+An other shortcut can select the next / previous text matching the current selection.
