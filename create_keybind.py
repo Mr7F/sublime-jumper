@@ -57,11 +57,14 @@ for c in string.printable:
     if c.strip():
         add_key(c, c)
 
+# https://www.sublimetext.com/docs/key_bindings.html#key-names
 for key, char in [
+    ("plus", "+"),
     ("keypad_plus", "+"),
     ("keypad_multiply", "*"),
     ("keypad_minus", "-"),
     ("keypad_divide", "/"),
+    ("keypad_period", "."),
 ]:
     # sublime.log_input(True)
     add_key(char, key)

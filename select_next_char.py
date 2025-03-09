@@ -97,6 +97,8 @@ class SelectNextCharSelectionCommand(sublime_plugin.TextCommand):
                 )
                 break
 
-        selections = self.view.sel()
+        selections = list(self.view.sel())
         if len(selections) == 1:
             self.view.show(selections[0])
+        if all(s.a == s.b for s in selections):
+            self.view.run_command("find_under_expand")
