@@ -158,7 +158,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         phantoms = [
             sublime.Phantom(
                 region,
-                f"<span style='border: 1px solid #60b0f4; border-radius: 5px; padding: 0 2px; font-size: 15px'>{c}</span>",
+                f"<span style='color: #c778dd; border: 1px solid #c778dd; border-radius: 5px; padding: 0 2px; font-size: 15px'>{c}</span>",
                 sublime.LAYOUT_INLINE,
             )
             for c, region in zip(self.charset, self.matches)
