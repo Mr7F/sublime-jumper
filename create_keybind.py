@@ -11,6 +11,7 @@ shortcut_previous = "alt+ctrl+super+3"
 shortcut_next = "alt+ctrl+super+4"
 
 shortcut_choose_location = "alt+ctrl+super+7"
+shortcut_choose_location_extend = "shift+alt+ctrl+super+7"
 
 shortcut_previous_extend = "shift+ctrl+alt+super+3"
 shortcut_next_extend = "shift+ctrl+alt+super+4"
@@ -75,18 +76,22 @@ def add_key(char, c):
             },
         ]
 
-    data += [
-        {
-            "keys": [shortcut_choose_location, c],
-            "command": "select_char_selection",
-            "args": {"char": char},
-        },
-        {
-            "keys": [shortcut_choose_location, "shift", c],
-            "command": "select_char_selection",
-            "args": {"char": char},
-        },
-    ]
+    for shortcut, extend in (
+        (shortcut_choose_location, False),
+        (shortcut_choose_location_extend, True),
+    ):
+        data += [
+            {
+                "keys": [shortcut, c],
+                "command": "select_char_selection",
+                "args": {"char": char, "extend": extend},
+            },
+            {
+                "keys": [shortcut, "shift", c],
+                "command": "select_char_selection",
+                "args": {"char": char, "extend": extend},
+            },
+        ]
 
 
 if __name__ == "__main__":

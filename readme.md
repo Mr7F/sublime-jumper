@@ -12,3 +12,10 @@ Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMo
 followed by a key, to highlight all matching character with a small label. Pressing the label jump to that position.
 
 ![demo](./demo.gif)
+
+Settings
+```json
+{
+    "select_next_char_charset": "tnseriaogmdhc,x.plfuwyvkbj:z123456789TNSERIAOGMDHCXPLFUWYVKBJ{}@%$&!#|^'-_=/;()"
+}
+```

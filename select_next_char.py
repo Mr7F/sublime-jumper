@@ -127,17 +127,20 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
     > https://github.com/jfcherng-sublime/ST-AceJump-Chinese
     """
 
-    charset = string.ascii_letters + string.digits + "@%${}&!#[]':-\"/|;^_="
+    CHARSET = string.ascii_letters + string.digits + "@%${}&!#[]':-\"/|;^_="
 
-    def run(self, edit, char):
+    def run(self, edit, char, extend=False):
         self.view.window().show_input_panel(
             "Jump to", "", self.on_cancel, self.on_change, self.on_cancel
         )
         self.char = char
         self.edit = edit
+        self.extend = extend
+        self.charset = (
+            self.view.settings().get("select_next_char_charset") or self.CHARSET
+        )
 
         visible_region = self.view.visible_region()
-        start_visible = visible_region.begin()
         start_cursor = self.view.sel()[0].begin()
         matches = self.view.find_all(self.char, sublime.LITERAL)
 
@@ -145,15 +148,12 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         # >>> print(self.view.find_all.__doc__)
         a, b = sorted(visible_region.to_tuple())
         matches = [m for m in matches if m.a >= a and m.b < b][: len(self.charset)]
-        matches = [sublime.Region(m.a, m.b) for m in matches]
+        self.matches = sorted(matches, key=lambda x: abs(x.begin() - start_cursor))
 
-        self.positions = dict(zip(self.charset, matches))
+        self.positions = dict(zip(self.charset, self.matches))
 
-        relative_cursor = max(start_cursor - start_visible, 0)
-        self.matches = sorted(matches, key=lambda x: abs(x.begin() - relative_cursor))
-
-        if self.view.id not in phantom_sets:
-            phantom_sets[self.view.id] = sublime.PhantomSet(self.view)
+        if self.view.id() not in phantom_sets:
+            phantom_sets[self.view.id()] = sublime.PhantomSet(self.view)
 
         phantoms = [
             sublime.Phantom(
@@ -161,21 +161,26 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
                 f"<span style='border: 1px solid #60b0f4; border-radius: 5px; padding: 0 2px; font-size: 15px'>{c}</span>",
                 sublime.LAYOUT_INLINE,
             )
-            for c, region in zip(self.charset, matches)
+            for c, region in zip(self.charset, self.matches)
         ]
 
-        phantom_sets[self.view.id].update(phantoms)
+        phantom_sets[self.view.id()].update(phantoms)
 
     def on_change(self, value):
         if not value:
             return
 
         if value in self.positions:
+            selection = self.view.sel()[0]
             self.view.sel().clear()
-            self.view.sel().add(self.positions[value])
+            if self.extend:
+                coord = selection.to_tuple() + self.positions[value].to_tuple()
+                self.view.sel().add(sublime.Region(min(coord), max(coord)))
+            else:
+                self.view.sel().add(self.positions[value])
 
         self.on_cancel()
 
     def on_cancel(self, *args, **kwargs):
-        phantom_sets[self.view.id].update([])
+        phantom_sets[self.view.id()].update([])
         self.view.window().run_command("hide_panel", {"cancel": True})
