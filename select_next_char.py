@@ -1,5 +1,6 @@
 import sublime, sublime_plugin, re
 from itertools import chain
+import string
 
 
 def _select_next(view, selection, direction, char, extend=False):
@@ -44,6 +45,8 @@ def _select_next(view, selection, direction, char, extend=False):
 
 
 class SelectNextCharCommand(sublime_plugin.TextCommand):
+    """Go to the character and select it."""
+
     def run(self, edit, char, direction="next", extend=False):
         for selection in list(self.view.sel()):
             _select_next(self.view, selection, direction, char, extend)
@@ -54,13 +57,17 @@ class SelectNextCharCommand(sublime_plugin.TextCommand):
 
 
 class SelectNextCharSelectionCommand(sublime_plugin.TextCommand):
-    def run(self, edit, direction="next"):
+    """Go to the next string matching the current selection and select it."""
+
+    def run(self, edit, direction="next", keep_selection=False):
         for selection in list(self.view.sel()):
             a, b = sorted(selection.to_tuple())
 
             selection_text = self.view.substr(selection)
             if len(selection_text) == 1:
                 _select_next(self.view, selection, direction, selection_text)
+                if keep_selection:
+                    self.view.sel().add(selection)
                 continue
 
             itr = (
@@ -96,7 +103,8 @@ class SelectNextCharSelectionCommand(sublime_plugin.TextCommand):
                 else:
                     target_idx = idx - char_idx - 1
 
-                self.view.sel().subtract(selection)
+                if not keep_selection:
+                    self.view.sel().subtract(selection)
                 self.view.sel().add(
                     sublime.Region(target_idx, target_idx + len(selection_text))
                 )
@@ -107,3 +115,67 @@ class SelectNextCharSelectionCommand(sublime_plugin.TextCommand):
             self.view.show(selections[0])
         if all(s.a == s.b for s in selections):
             self.view.run_command("find_under_expand")
+
+
+phantom_sets = {}
+
+
+class SelectCharSelectionCommand(sublime_plugin.TextCommand):
+    """Highlight all the characters visible on the screen, with a letter for each, press that letter to jump to the position.
+
+    Similar package:
+    > https://github.com/jfcherng-sublime/ST-AceJump-Chinese
+    """
+
+    charset = string.ascii_letters + string.digits + "@%${}&!#[]':-\"/|;^_="
+
+    def run(self, edit, char):
+        self.view.window().show_input_panel(
+            "Jump to", "", self.on_cancel, self.on_change, self.on_cancel
+        )
+        self.char = char
+        self.edit = edit
+
+        visible_region = self.view.visible_region()
+        start_visible = visible_region.begin()
+        start_cursor = self.view.sel()[0].begin()
+        matches = self.view.find_all(self.char, sublime.LITERAL)
+
+        # TODO: use `within=visible_region` instead
+        # >>> print(self.view.find_all.__doc__)
+        a, b = sorted(visible_region.to_tuple())
+        matches = [m for m in matches if m.a >= a and m.b < b][: len(self.charset)]
+        matches = [sublime.Region(m.a, m.b) for m in matches]
+
+        self.positions = dict(zip(self.charset, matches))
+
+        relative_cursor = max(start_cursor - start_visible, 0)
+        self.matches = sorted(matches, key=lambda x: abs(x.begin() - relative_cursor))
+
+        if self.view.id not in phantom_sets:
+            phantom_sets[self.view.id] = sublime.PhantomSet(self.view)
+
+        phantoms = [
+            sublime.Phantom(
+                region,
+                f"<span style='border: 1px solid #60b0f4; border-radius: 5px; padding: 0 2px; font-size: 15px'>{c}</span>",
+                sublime.LAYOUT_INLINE,
+            )
+            for c, region in zip(self.charset, matches)
+        ]
+
+        phantom_sets[self.view.id].update(phantoms)
+
+    def on_change(self, value):
+        if not value:
+            return
+
+        if value in self.positions:
+            self.view.sel().clear()
+            self.view.sel().add(self.positions[value])
+
+        self.on_cancel()
+
+    def on_cancel(self, *args, **kwargs):
+        phantom_sets[self.view.id].update([])
+        self.view.window().run_command("hide_panel", {"cancel": True})
