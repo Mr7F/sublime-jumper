@@ -1,0 +1,20 @@
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>name</key>
+    <string>GoToChar</string>
+    <key>hidden</key>
+    <true/>
+    <key>patterns</key>
+    <array>
+        <dict>
+            <key>match</key>
+            <string>(.*)</string>
+            <key>name</key>
+            <string>text.go_to_char</string>
+        </dict>
+    </array>
+    <key>scopeName</key>
+    <string>text.go_to_char</string>
+</dict>
+</plist>

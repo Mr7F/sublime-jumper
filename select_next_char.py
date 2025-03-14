@@ -124,6 +124,8 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
     """Highlight all the characters visible on the screen, with a letter for each, press that letter to jump to the position.
 
     Similar package:
+    > https://packagecontrol.io/packages/EasyMotion
+    > https://github.com/ice9js/ace-jump-sublime
     > https://github.com/jfcherng-sublime/ST-AceJump-Chinese
     """
 
@@ -140,13 +142,13 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
             self.view.settings().get("select_next_char_charset") or self.CHARSET
         )
 
-        visible_region = self.view.visible_region()
+        self.visible_region = self.view.visible_region()
         start_cursor = self.view.sel()[0].begin()
         matches = self.view.find_all(self.char, sublime.LITERAL)
 
         # TODO: use `within=visible_region` instead
         # >>> print(self.view.find_all.__doc__)
-        a, b = sorted(visible_region.to_tuple())
+        a, b = sorted(self.visible_region.to_tuple())
         matches = [m for m in matches if m.a >= a and m.b < b]
         self.matches = sorted(matches, key=lambda x: abs(x.begin() - start_cursor))
         self.matches = self.matches[: len(self.charset)]
@@ -156,20 +158,30 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         if self.view.id() not in phantom_sets:
             phantom_sets[self.view.id()] = sublime.PhantomSet(self.view)
 
+        # TODO: make it work in multi view
+        # self.syntax = self.view.syntax()
+        # self.view.set_syntax_file(
+        #     "Packages/sublime-select-next-char/GoToChar.tmLanguage"
+        # )
+
         phantoms = [
             sublime.Phantom(
-                region,
+                sublime.Region(region.a, region.b),
                 f"<span style='color: #c778dd; border: 1px solid #c778dd; border-radius: 5px; padding: 0 2px; font-size: 15px'>{c}</span>",
                 sublime.LAYOUT_INLINE,
             )
             for c, region in zip(self.charset, self.matches)
         ]
-
         phantom_sets[self.view.id()].update(phantoms)
+
+        # for i, (m, c) in enumerate(sorted(zip(self.matches, self.charset), key=lambda x: x[0].b)):
+        #     self.view.replace(edit, sublime.Region(m.a - i, m.b - i), "")
 
     def on_change(self, value):
         if not value:
             return
+
+        self.on_cancel()
 
         if value in self.positions:
             selection = self.view.sel()[0]
@@ -180,8 +192,8 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
             else:
                 self.view.sel().add(self.positions[value])
 
-        self.on_cancel()
-
     def on_cancel(self, *args, **kwargs):
         phantom_sets[self.view.id()].update([])
         self.view.window().run_command("hide_panel", {"cancel": True})
+        # self.view.run_command("soft_undo")
+        # self.view.set_syntax_file(self.syntax)
