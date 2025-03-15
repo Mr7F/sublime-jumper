@@ -1,8 +1,6 @@
 # Sublime - Select Next Char
 Press a shortcut, then a key to select the next / previous character corresponding to the key pressed.
 
-You can also select everything between the current selection and the target character.
-
 Because of the way shortcut work in sublime, you need to run `create_keybind.py` in order to generate the shortcut file.
 
 An other shortcut can select the next / previous text matching the current selection.
@@ -23,3 +21,5 @@ Settings
 You can type
 - space to jump at the beginning of non-empty line
 - tab to jump at the end of non-empty line
+
+In extend mode, press enter to enter in multi-selection mode. Then you can press a letter, then it's label many time. When you are done, press escape.

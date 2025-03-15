@@ -101,6 +101,7 @@ if __name__ == "__main__":
 
     add_key(" ", " ")
     add_key("\t", "tab")
+    add_key("enter", "enter")
 
     # https://www.sublimetext.com/docs/key_bindings.html#key-names
     for key, char in [

@@ -132,16 +132,29 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
     CHARSET = string.ascii_letters + string.digits + "@%${}&!#[]':-\"/|;^_="
 
     def run(self, edit, char, extend=False):
+        if char == "enter" and not extend:
+            return
+
+        self.multi_mode = char == "enter"
+        self.multi_mode_char = None
+        self.multi_mode_old_value = ""
+
         self.view.window().show_input_panel(
-            "Jump to", "", self.on_cancel, self.on_change, self.on_cancel
+            "Jump to",
+            "",
+            self.on_cancel,
+            self.on_change,
+            self.on_cancel,
         )
-        self.char = char
         self.edit = edit
         self.extend = extend
         self.charset = (
             self.view.settings().get("select_next_char_charset") or self.CHARSET
         )
+        if char != "enter":
+            self._find_match(char)
 
+    def _find_match(self, char):
         self.visible_region = self.view.visible_region()
         start_cursor = self.view.sel()[0].begin()
         if char == " ":
@@ -156,7 +169,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         else:
             # TODO: use `within=visible_region` instead
             # >>> print(self.view.find_all.__doc__)
-            matches = self.view.find_all(self.char, sublime.LITERAL)
+            matches = self.view.find_all(char, sublime.LITERAL)
 
         a, b = sorted(self.visible_region.to_tuple())
         matches = [m for m in matches if m.a >= a and m.b < b]
@@ -191,16 +204,32 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         if not value:
             return
 
+        if self.multi_mode:
+            v = value[-1:]
+            if self.multi_mode_char is None:
+                self.multi_mode_char = v
+                self._find_match(v)
+            elif v in self.positions:
+                self.multi_mode_char = None
+                phantom_sets[self.view.id()].update([])
+
+                if not self.multi_mode_old_value.startswith(value) or len(
+                    self.multi_mode_old_value
+                ) <= len(value):
+                    # If we didn't press backspace
+                    self.view.sel().add(self.positions[v])
+
+            self.multi_mode_old_value = value
+
+            return
+
         self.on_cancel()
 
-        if value in self.positions:
-            selection = self.view.sel()[0]
+        if not self.extend:
             self.view.sel().clear()
-            if self.extend:
-                coord = selection.to_tuple() + self.positions[value].to_tuple()
-                self.view.sel().add(sublime.Region(min(coord), max(coord)))
-            else:
-                self.view.sel().add(self.positions[value])
+
+        if value in self.positions:
+            self.view.sel().add(self.positions[value])
 
     def on_cancel(self, *args, **kwargs):
         phantom_sets[self.view.id()].update([])
