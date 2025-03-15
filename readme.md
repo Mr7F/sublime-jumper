@@ -23,3 +23,5 @@ You can type
 - tab to jump at the end of non-empty line
 
 In extend mode, press enter to enter in multi-selection mode. Then you can press a letter, then it's label many time. When you are done, press escape.
+
+The jump work when many files are open (but not the extend, because we can not edit 2 files at the same time).

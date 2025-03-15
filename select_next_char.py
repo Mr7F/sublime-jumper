@@ -1,4 +1,4 @@
-import sublime, sublime_plugin, re
+import sublime, sublime_plugin
 from itertools import chain
 import string
 
@@ -56,7 +56,9 @@ class SelectNextCharCommand(sublime_plugin.TextCommand):
             self.view.show(selections[0])
 
 
-class SelectNextCharSelectionCommand(sublime_plugin.TextCommand):
+class SelectNextCharSelectionCommand(
+    sublime_plugin.TextCommand, sublime_plugin.WindowCommand
+):
     """Go to the next string matching the current selection and select it."""
 
     def run(self, edit, direction="next", keep_selection=False):
@@ -152,38 +154,43 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
             self.view.settings().get("select_next_char_charset") or self.CHARSET
         )
         if char != "enter":
-            self._find_match(char)
+            self._find_match_views(char)
 
-    def _find_match(self, char):
-        self.visible_region = self.view.visible_region()
-        start_cursor = self.view.sel()[0].begin()
+    def _find_match(self, char, view, charset) -> "dict[str, sublime.Region]":
+        visible_region = view.visible_region()
+        start_cursor = (
+            view.sel()[0].begin()
+            if view.sel()
+            else (visible_region.a + visible_region.b) // 2
+        )
+        print("start_cursor", start_cursor)
         if char == " ":
-            matches = self.view.find_all(r"^\s*[^\s]")
+            matches = view.find_all(r"^\s*[^\s]")
             matches = [sublime.Region(m.b - 1, m.b - 1) for m in matches]
         elif char == "\t":
-            matches = self.view.find_all(r"[^\s]$")
+            matches = view.find_all(r"[^\s]$")
             matches = [sublime.Region(m.b, m.b) for m in matches]
         elif char in "'\"":
             # Find any quotes types
-            matches = self.view.find_all(r"['\"`]")
+            matches = view.find_all(r"['\"`]")
         else:
             # TODO: use `within=visible_region` instead
             # >>> print(self.view.find_all.__doc__)
-            matches = self.view.find_all(char, sublime.LITERAL)
+            matches = view.find_all(char, sublime.LITERAL)
 
-        a, b = sorted(self.visible_region.to_tuple())
+        a, b = sorted(visible_region.to_tuple())
         matches = [m for m in matches if m.a >= a and m.b < b]
-        self.matches = sorted(matches, key=lambda x: abs(x.begin() - start_cursor))
-        self.matches = self.matches[: len(self.charset)]
+        matches = sorted(matches, key=lambda x: abs(x.begin() - start_cursor))
+        matches = matches[: len(charset)]
 
-        self.positions = dict(zip(self.charset, self.matches))
+        positions = dict(zip(charset, matches))
 
-        if self.view.id() not in phantom_sets:
-            phantom_sets[self.view.id()] = sublime.PhantomSet(self.view)
+        if view.id() not in phantom_sets:
+            phantom_sets[view.id()] = sublime.PhantomSet(view)
 
         # TODO: make it work in multi view
-        # self.syntax = self.view.syntax()
-        # self.view.set_syntax_file(
+        # self.syntax = view.syntax()
+        # view.set_syntax_file(
         #     "Packages/sublime-select-next-char/GoToChar.tmLanguage"
         # )
 
@@ -193,12 +200,32 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
                 f"<span style='color: #c778dd; border: 1px solid #c778dd; border-radius: 5px; padding: 0 2px; font-size: 15px'>{c}</span>",
                 sublime.LAYOUT_INLINE,
             )
-            for c, region in zip(self.charset, self.matches)
+            for c, region in zip(charset, matches)
         ]
-        phantom_sets[self.view.id()].update(phantoms)
+        phantom_sets[view.id()].update(phantoms)
 
         # for i, (m, c) in enumerate(sorted(zip(self.matches, self.charset), key=lambda x: x[0].b)):
         #     self.view.replace(edit, sublime.Region(m.a - i, m.b - i), "")
+        return positions
+
+    def _find_match_views(self, char):
+        self.positions = {}
+        done = 0
+        print(self._active_views)
+        for view in self._active_views:
+            positions = self._find_match(char, view, self.charset[done:])
+            done += len(positions)
+            self.positions.update(
+                {c: (region, view) for c, region in positions.items()}
+            )
+
+    @property
+    def _active_views(self):
+        views = [
+            self.view.window().active_view_in_group(group)
+            for group in range(self.view.window().num_groups())
+        ]
+        return sorted(views, key=lambda v: v != self.view)
 
     def on_change(self, value):
         if not value:
@@ -208,16 +235,17 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
             v = value[-1:]
             if self.multi_mode_char is None:
                 self.multi_mode_char = v
-                self._find_match(v)
+                self._find_match_views(v)
             elif v in self.positions:
                 self.multi_mode_char = None
-                phantom_sets[self.view.id()].update([])
+                for view in self._active_views:
+                    phantom_sets[view.id()].update([])
 
                 if not self.multi_mode_old_value.startswith(value) or len(
                     self.multi_mode_old_value
                 ) <= len(value):
                     # If we didn't press backspace
-                    self.view.sel().add(self.positions[v])
+                    self.positions[0].view.sel().add(self.positions[v][1])
 
             self.multi_mode_old_value = value
 
@@ -226,13 +254,16 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         self.on_cancel()
 
         if not self.extend:
-            self.view.sel().clear()
+            for view in self._active_views:
+                view.sel().clear()
 
         if value in self.positions:
-            self.view.sel().add(self.positions[value])
+            self.positions[value][1].sel().add(self.positions[value][0])
 
     def on_cancel(self, *args, **kwargs):
-        phantom_sets[self.view.id()].update([])
+        for view in self._active_views:
+            phantom_sets[view.id()].update([])
+
         self.view.window().run_command("hide_panel", {"cancel": True})
         # self.view.run_command("soft_undo")
         # self.view.set_syntax_file(self.syntax)
