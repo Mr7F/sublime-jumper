@@ -6,8 +6,8 @@ import string
 def _select_next(view, selection, direction, char, extend=False):
     a, b = sorted(selection.to_tuple())
 
-    if char in "'\"":
-        char = "'\""
+    if char in "'\"`":
+        char = "'\"`"
 
     itr = (
         chain(range(b, view.size(), 1000), range(0, b, 1000))
@@ -150,6 +150,9 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         elif char == "\t":
             matches = self.view.find_all(r"[^\s]$")
             matches = [sublime.Region(m.b, m.b) for m in matches]
+        elif char in "'\"":
+            # Find any quotes types
+            matches = self.view.find_all(r"['\"`]")
         else:
             # TODO: use `within=visible_region` instead
             # >>> print(self.view.find_all.__doc__)
