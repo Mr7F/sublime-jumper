@@ -19,3 +19,7 @@ Settings
     "select_next_char_charset": "tnseriaogmdhc,x.plfuwyvkbj:z123456789TNSERIAOGMDHCXPLFUWYVKBJ{}@%$&!#|^'-_=/;()"
 }
 ```
+
+You can type
+- space to jump at the beginning of non-empty line
+- tab to jump at the end of non-empty line

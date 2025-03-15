@@ -144,10 +144,17 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 
         self.visible_region = self.view.visible_region()
         start_cursor = self.view.sel()[0].begin()
-        matches = self.view.find_all(self.char, sublime.LITERAL)
+        if char == " ":
+            matches = self.view.find_all(r"^\s*[^\s]")
+            matches = [sublime.Region(m.b - 1, m.b - 1) for m in matches]
+        elif char == "\t":
+            matches = self.view.find_all(r"[^\s]$")
+            matches = [sublime.Region(m.b, m.b) for m in matches]
+        else:
+            # TODO: use `within=visible_region` instead
+            # >>> print(self.view.find_all.__doc__)
+            matches = self.view.find_all(self.char, sublime.LITERAL)
 
-        # TODO: use `within=visible_region` instead
-        # >>> print(self.view.find_all.__doc__)
         a, b = sorted(self.visible_region.to_tuple())
         matches = [m for m in matches if m.a >= a and m.b < b]
         self.matches = sorted(matches, key=lambda x: abs(x.begin() - start_cursor))

@@ -99,6 +99,9 @@ if __name__ == "__main__":
         if c.strip():
             add_key(c, c)
 
+    add_key(" ", " ")
+    add_key("\t", "tab")
+
     # https://www.sublimetext.com/docs/key_bindings.html#key-names
     for key, char in [
         ("plus", "+"),
