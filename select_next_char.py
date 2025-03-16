@@ -259,6 +259,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 
         if value in self.positions:
             self.positions[value][1].sel().add(self.positions[value][0])
+            self.view.window().focus_view(self.positions[value][1])
 
     def on_cancel(self, *args, **kwargs):
         for view in self._active_views:
