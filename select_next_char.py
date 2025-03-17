@@ -3,7 +3,7 @@ from itertools import chain
 import string
 
 
-USE_PHANTOMS = False
+USE_PHANTOMS = True
 syntax_per_view = {}
 phantom_sets = {}
 
@@ -241,8 +241,8 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 
         if value in self.positions:
             self.positions[value][1].sel().add(self.positions[value][0])
+            self.positions[value][1](self.positions[value][0])
             self.view.window().focus_view(self.positions[value][1])
-            self.view.show(self.positions[value][0])
 
     def on_cancel(self, *args, **kwargs):
         if self.exit:
@@ -268,14 +268,18 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
         if USE_PHANTOMS:
             if self.view.id() not in phantom_sets:
                 phantom_sets[self.view.id()] = sublime.PhantomSet(self.view)
-            phantoms = [
-                sublime.Phantom(
+
+            positions = sorted(positions, key=lambda x: x[1], reverse=True)
+
+            phantoms = []
+            for i, (c, a, b) in enumerate(positions):
+                self.view.replace(edit, sublime.Region(a, b), "")
+                phantoms.append(sublime.Phantom(
                     sublime.Region(a, b),
-                    f"<span style='color: #c778dd; border: 1px solid #c778dd; border-radius: 5px; padding: 0 2px'>{c}</span>",
+                    f"<span style='color: #c778dd; padding: 0 -2px'>{c}</span>",
                     sublime.LAYOUT_INLINE,
-                )
-                for c, a, b in positions
-            ]
+                ))
+
             phantom_sets[self.view.id()].update(phantoms)
 
         else:
@@ -297,5 +301,6 @@ class SelectCharSelectionRemoveLabelsCommand(sublime_plugin.TextCommand):
         else:
             # TODO: clean redo stack but not undo
             self.view.erase_regions("select_char_jump")
-            self.view.end_edit(edit)
-            self.view.run_command("undo")
+
+        self.view.end_edit(edit)
+        self.view.run_command("undo")
