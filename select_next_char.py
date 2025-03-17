@@ -273,7 +273,6 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
 
             phantoms = []
             for i, (c, a, b) in enumerate(positions):
-                self.view.replace(edit, sublime.Region(a, b), "")
                 phantoms.append(sublime.Phantom(
                     sublime.Region(a, b),
                     f"<span style='color: #c778dd; padding: 0 -2px'>{c}</span>",
@@ -301,6 +300,5 @@ class SelectCharSelectionRemoveLabelsCommand(sublime_plugin.TextCommand):
         else:
             # TODO: clean redo stack but not undo
             self.view.erase_regions("select_char_jump")
-
-        self.view.end_edit(edit)
-        self.view.run_command("undo")
+            self.view.end_edit(edit)
+            self.view.run_command("undo")
