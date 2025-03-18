@@ -1,9 +1,12 @@
 import sublime, sublime_plugin
 from itertools import chain
+from collections import defaultdict
 import string
+import html
 
-
+ALLOW_N_CHARS_LABEL = True
 USE_PHANTOMS = True
+assert not ALLOW_N_CHARS_LABEL or USE_PHANTOMS
 syntax_per_view = {}
 phantom_sets = {}
 
@@ -140,9 +143,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         if char == "enter" and not extend:
             return
 
-        self.multi_mode = char == "enter"
-        self.multi_mode_char = None
-        self.multi_mode_old_value = ""
+        self.char = char
 
         self.view.window().show_input_panel(
             "Jump to",
@@ -153,12 +154,22 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         )
         self.edit = edit
         self.extend = extend
-        self.charset = (
+        self.charset = list(
             self.view.settings().get("select_next_char_charset") or self.CHARSET
         )
+
+        # Show many jump characters if needed
+        self.jump_next_c = self.charset[15]
+        if ALLOW_N_CHARS_LABEL:
+            self.charset = self.charset[:15] + self.charset[16:]
+            base_charset = self.charset.copy()
+            for i in range(1, 5):
+                self.charset.extend([i * self.jump_next_c + c for c in base_charset])
+
+            assert len(set(self.charset)) == len(self.charset)
+
         self.exit = False
-        if char != "enter":
-            self._find_match_views(char)
+        self._find_match_views(char)
 
     def _find_match(self, char, view, charset) -> "dict[str, sublime.Region]":
         visible_region = view.visible_region()
@@ -187,7 +198,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         matches = matches[: len(charset)]
         return dict(zip(charset, matches))
 
-    def _find_match_views(self, char):
+    def _find_match_views(self, char, search=""):
         """Find the matching chars in all active view and add labels."""
         self.positions = {}
         done = 0
@@ -197,9 +208,17 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
             self.positions.update(
                 {c: (region, view) for c, region in positions.items()}
             )
+
+        self._show_labels(search)
+
+    def _show_labels(self, search=""):
+        for view, values in self._positions_per_view.items():
             view.run_command(
                 "select_char_selection_add_labels",
-                {"positions": [(c, m.a, m.b) for c, m in positions.items()]},
+                {
+                    "positions": [(c, m.a, m.b) for c, m in values],
+                    "search": search,
+                },
             )
 
     @property
@@ -210,39 +229,33 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         ]
         return sorted(views, key=lambda v: v != self.view)
 
+    @property
+    def _positions_per_view(self):
+        res = defaultdict(list)
+        for c, (region, view) in self.positions.items():
+            res[view].append((c, region))
+        return res
+
     def on_change(self, value):
-        if not value:
-            return
-
-        if self.multi_mode:
-            v = value[-1:]
-            if self.multi_mode_char is None:
-                self.multi_mode_char = v
-                self._find_match_views(v)
-            elif v in self.positions:
-                self.multi_mode_char = None
-                for view in self._active_views:
-                    phantom_sets[view.id()].update([])
-
-                if not self.multi_mode_old_value.startswith(value) or len(
-                    self.multi_mode_old_value
-                ) <= len(value):
-                    # If we didn't press backspace
-                    self.positions[0].view.sel().add(self.positions[v][1])
-
-            self.multi_mode_old_value = value
-            return
-
-        self.on_cancel()
-
-        if not self.extend:
-            for view in self._active_views:
-                view.sel().clear()
+        if value in self.positions or not ALLOW_N_CHARS_LABEL:
+            self.on_cancel()
 
         if value in self.positions:
-            self.positions[value][1].sel().add(self.positions[value][0])
-            self.positions[value][1](self.positions[value][0])
+            if not self.extend:
+                for view in self._active_views:
+                    view.sel().clear()
+
+            to_jump = sublime.Region(
+                self.positions[value][0].a,
+                self.positions[value][0].a,
+            )
+            self.positions[value][1].sel().add(to_jump)
+            self.positions[value][1].show(to_jump)
             self.view.window().focus_view(self.positions[value][1])
+
+        elif ALLOW_N_CHARS_LABEL:
+            # Update color of phantom
+            self._show_labels(value)
 
     def on_cancel(self, *args, **kwargs):
         if self.exit:
@@ -259,11 +272,12 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
     """Do those modifications in a command, to easily undo it once we are done."""
 
-    def run(self, edit, positions):
-        syntax_per_view[self.view.id()] = self.view.syntax()
-        self.view.set_syntax_file(
-            "Packages/sublime-select-next-char/GoToChar.tmLanguage"
-        )
+    def run(self, edit, positions, search):
+        if syntax_per_view.get(self.view.id(), "").endswith("GoToChar.tmLanguage"):
+            syntax_per_view[self.view.id()] = self.view.syntax()
+            self.view.set_syntax_file(
+                "Packages/sublime-select-next-char/GoToChar.tmLanguage"
+            )
 
         if USE_PHANTOMS:
             if self.view.id() not in phantom_sets:
@@ -273,11 +287,21 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
 
             phantoms = []
             for i, (c, a, b) in enumerate(positions):
-                phantoms.append(sublime.Phantom(
-                    sublime.Region(a, b),
-                    f"<span style='color: #c778dd; padding: 0 -2px'>{c}</span>",
-                    sublime.LAYOUT_INLINE,
-                ))
+                color = "#c778dd" if c.startswith(search) else "#abb2bf"
+                phantoms.append(
+                    sublime.Phantom(
+                        sublime.Region(a, b),
+                        "".join(
+                            f"""<span style='color: #abb2bf'>{a}</span>"""
+                            for a in c[: len(search)]
+                        )
+                        + "".join(
+                            f"""<span style='color: {color}'>{a}</span>"""
+                            for a in c[len(search) :]
+                        ),
+                        sublime.LAYOUT_INLINE,
+                    ),
+                )
 
             phantom_sets[self.view.id()].update(phantoms)
 
