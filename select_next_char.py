@@ -339,7 +339,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 start, size = html_position
                 text = (
                     text[:start]
-                    + f"<span style='color: {color}; font-style: normal;'>{html.escape(label)}</span>"
+                    + f"<span style='color: {color}; font-style: normal; font-weight: bold'>{html.escape(label)}</span>"
                     + text[start + size :]
                 )
 
