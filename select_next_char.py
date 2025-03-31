@@ -348,8 +348,8 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
             self.view.show_popup(
                 f"<style>html {{padding: -9px -10px}}</style><div style='background-color: var(--background); line-height: {line_height}px; padding: -{line_height + 12 - 10}px 10px; padding-right: 5000px'>{text}</div>",
                 location=visible_region.a,
-                max_width=10_000,
-                max_height=10_000,
+                max_width=self.view.viewport_extent()[0],
+                max_height=self.view.viewport_extent()[1],
                 flags=32,
                 # on_hide=lambda: not self.view.is_popup_visible() and self.view.window().run_command("hide_panel", {"cancel": True}),
             )
