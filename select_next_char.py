@@ -3,10 +3,12 @@ from itertools import chain
 from collections import defaultdict
 import string
 import html
+from .utils import get_element_html_positions
 
 ALLOW_N_CHARS_LABEL = True
-USE_PHANTOMS = True
-assert not ALLOW_N_CHARS_LABEL or USE_PHANTOMS
+LABEL_MODE = "popup"
+assert LABEL_MODE in ("phantoms", "popup", "buffer")
+assert not ALLOW_N_CHARS_LABEL or LABEL_MODE != "phantoms"
 syntax_per_view = {}
 phantom_sets = {}
 
@@ -279,7 +281,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 "Packages/sublime-select-next-char/GoToChar.tmLanguage"
             )
 
-        if USE_PHANTOMS:
+        if LABEL_MODE == "phantoms":
             if self.view.id() not in phantom_sets:
                 phantom_sets[self.view.id()] = sublime.PhantomSet(self.view)
 
@@ -305,6 +307,53 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
 
             phantom_sets[self.view.id()].update(phantoms)
 
+        elif LABEL_MODE == "popup":
+            # text = html.escape(self.view.substr(self.view.visible_region()))
+            # text = text.replace(" ", "&nbsp;").replace("\n", "<br/>&#8203;")
+
+            visible_region = self.view.visible_region()
+
+            text = self.view.export_to_html(visible_region, minihtml=True)
+
+            line_padding_bottom = self.view.settings().get("line_padding_bottom", 0)
+            line_padding_top = self.view.settings().get("line_padding_top", 0)
+            line_height = (
+                self.view.line_height() + line_padding_bottom + line_padding_top
+            )
+
+            offset_region = visible_region.a
+
+            html_positions = get_element_html_positions(
+                text,
+                [p[1] - offset_region for p in positions],
+            )
+
+            positions = sorted(positions, key=lambda x: x[1], reverse=True)
+            for i, (c, a, b) in enumerate(positions):
+                html_position = html_positions.get(a - offset_region)
+                if not html_position:
+                    continue
+
+                color = "#c778dd" if c.startswith(search) else "#abb2bf"
+                label = c[len(search) : len(search) + 1] or c[-1]
+                start, size = html_position
+                text = (
+                    text[:start]
+                    + f"<span style='color: {color}; font-style: normal;'>{html.escape(label)}</span>"
+                    + text[start + size :]
+                )
+
+            text = text.replace("<br>", "<br>&#8203;")
+
+            self.view.show_popup(
+                f"<style>html {{padding: -9px -10px}}</style><div style='background-color: var(--background); line-height: {line_height}px; padding: -{line_height + 12 - 10}px 10px; padding-right: 5000px'>{text}</div>",
+                location=visible_region.a,
+                max_width=10_000,
+                max_height=10_000,
+                flags=32,
+                # on_hide=lambda: not self.view.is_popup_visible() and self.view.window().run_command("hide_panel", {"cancel": True}),
+            )
+
         else:
             self.view.add_regions(
                 "select_char_jump",
@@ -318,9 +367,11 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
 
 class SelectCharSelectionRemoveLabelsCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        if USE_PHANTOMS:
+        if LABEL_MODE == "phantoms":
             if self.view.id() in phantom_sets:
                 phantom_sets[self.view.id()].update([])
+        elif LABEL_MODE == "popup":
+            self.view.hide_popup()
         else:
             # TODO: clean redo stack but not undo
             self.view.erase_regions("select_char_jump")
