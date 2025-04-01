@@ -6,11 +6,15 @@ import html
 from .utils import get_element_html_positions
 
 ALLOW_N_CHARS_LABEL = True
-LABEL_MODE = "popup"
-assert LABEL_MODE in ("phantoms", "popup", "buffer")
+LABEL_MODE = "sheet"
+width_row_number = 66
+assert LABEL_MODE in ("sheet", "phantoms", "popup", "buffer")
 assert not ALLOW_N_CHARS_LABEL or LABEL_MODE != "phantoms"
 syntax_per_view = {}
 phantom_sets = {}
+sheets_per_view = {}
+active_view = {}
+views = {}
 
 
 def _select_next(view, selection, direction, char, extend=False):
@@ -45,7 +49,8 @@ def _select_next(view, selection, direction, char, extend=False):
             target_idx = idx - char_idx - 1
 
         view.sel().subtract(selection)
-        end_target = target_idx + 1
+        end_target = target_idx
+        # end_target = target_idx + 1
         if extend:
             target_idx = min(target_idx, a)
             end_target = max(end_target, b)
@@ -142,28 +147,28 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
     CHARSET = string.ascii_letters + string.digits + "@%${}&!#[]':-\"/|;^_="
 
     def run(self, edit, char, extend=False):
-        if char == "enter" and not extend:
-            return
+        global views, sheets_per_view, active_view
+        self.extend = extend
+
+        views = {v: v.visible_region() for v in self._active_views if v is not None}
+        active_view[self.view.window()] = self.view.window().active_view()
+
+        if LABEL_MODE == "sheet":
+            for sheet in sheets_per_view.values():
+                sheet.close()
+            sheets_per_view = {}
 
         self.char = char
 
-        self.view.window().show_input_panel(
-            "Jump to",
-            "",
-            self.on_cancel,
-            self.on_change,
-            self.on_cancel,
-        )
         self.edit = edit
-        self.extend = extend
         self.charset = list(
             self.view.settings().get("select_next_char_charset") or self.CHARSET
         )
 
         # Show many jump characters if needed
-        self.jump_next_c = self.charset[15]
+        self.jump_next_c = "."
         if ALLOW_N_CHARS_LABEL:
-            self.charset = self.charset[:15] + self.charset[16:]
+            self.charset = [c for c in self.charset if c != "."]
             base_charset = self.charset.copy()
             for i in range(1, 5):
                 self.charset.extend([i * self.jump_next_c + c for c in base_charset])
@@ -173,8 +178,16 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         self.exit = False
         self._find_match_views(char)
 
+        self.view.window().show_input_panel(
+            "Select to" if extend else "Jump to",
+            "",
+            self.on_cancel,
+            self.on_change,
+            self.on_cancel,
+        )
+
     def _find_match(self, char, view, charset) -> "dict[str, sublime.Region]":
-        visible_region = view.visible_region()
+        visible_region = views[view]
         start_cursor = (
             view.sel()[0].begin()
             if view.sel()
@@ -204,7 +217,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         """Find the matching chars in all active view and add labels."""
         self.positions = {}
         done = 0
-        for view in self._active_views:
+        for view in views:
             positions = self._find_match(char, view, self.charset[done:])
             done += len(positions)
             self.positions.update(
@@ -220,11 +233,14 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
                 {
                     "positions": [(c, m.a, m.b) for c, m in values],
                     "search": search,
+                    "extend": self.extend,
                 },
             )
 
     @property
     def _active_views(self):
+        if self.extend:
+            return [self.view]
         views = [
             self.view.window().active_view_in_group(group)
             for group in range(self.view.window().num_groups())
@@ -239,21 +255,67 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         return res
 
     def on_change(self, value):
-        if value in self.positions or not ALLOW_N_CHARS_LABEL:
+        if value.strip() in self.positions or not ALLOW_N_CHARS_LABEL:
             self.on_cancel()
 
+        # Switch selection mode
+        if value == " ":
+            self.extend = 1
+            self._show_labels(value.strip())
+            return
+
+        if value == "\t":
+            self.extend = 2
+            self._show_labels(value.strip())
+            return
+
+        if not value:
+            self.extend = 0
+            self._show_labels(value.strip())
+            return
+
+        value = value.strip()
+
         if value in self.positions:
-            if not self.extend:
-                for view in self._active_views:
+            target_view = self.positions[value][1]
+            if self.extend:
+                to_jump = []
+                for sel in target_view.sel():
+                    target_idx = self.positions[value][0].a
+
+                    if self.extend == 1 and target_idx < min(sel.a, sel.b):
+                        # Do not select the match
+                        target_idx += 1
+
+                    if self.extend == 2 and target_idx > min(sel.a, sel.b):
+                        # Select the match
+                        target_idx += 1
+
+                    to_jump.append(
+                        sublime.Region(
+                            min(target_idx, sel.a, sel.b),
+                            max(target_idx, sel.a, sel.b),
+                        )
+                    )
+
+                target_view.sel().clear()
+                for r in to_jump:
+                    target_view.sel().add(r)
+
+                target_view.show(to_jump[0])
+
+            else:
+                for view in views:
                     view.sel().clear()
 
-            to_jump = sublime.Region(
-                self.positions[value][0].a,
-                self.positions[value][0].a,
-            )
-            self.positions[value][1].sel().add(to_jump)
-            self.positions[value][1].show(to_jump)
-            self.view.window().focus_view(self.positions[value][1])
+                to_jump = sublime.Region(
+                    self.positions[value][0].a,
+                    self.positions[value][0].a,
+                )
+                target_view.sel().add(to_jump)
+                target_view.show(to_jump)
+
+            self.view.window().focus_view(target_view)
 
         elif ALLOW_N_CHARS_LABEL:
             # Update color of phantom
@@ -265,22 +327,15 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         self.exit = True
 
         self.view.window().run_command("hide_panel", {"cancel": True})
-        for view in self._active_views:
+        for view in views:
             view.run_command("select_char_selection_remove_labels")
-            if view.id() in syntax_per_view:
-                view.set_syntax_file(syntax_per_view[view.id()])
 
 
 class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
     """Do those modifications in a command, to easily undo it once we are done."""
 
-    def run(self, edit, positions, search):
-        if syntax_per_view.get(self.view.id(), "").endswith("GoToChar.tmLanguage"):
-            syntax_per_view[self.view.id()] = self.view.syntax()
-            self.view.set_syntax_file(
-                "Packages/sublime-select-next-char/GoToChar.tmLanguage"
-            )
-
+    def run(self, edit, positions, search, extend):
+        self.extend = extend
         if LABEL_MODE == "phantoms":
             if self.view.id() not in phantom_sets:
                 phantom_sets[self.view.id()] = sublime.PhantomSet(self.view)
@@ -337,6 +392,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 color = "#c778dd" if c.startswith(search) else "#abb2bf"
                 label = c[len(search) : len(search) + 1] or c[-1]
                 start, size = html_position
+
                 text = (
                     text[:start]
                     + f"<span style='color: {color}; font-style: normal; font-weight: bold'>{html.escape(label)}</span>"
@@ -354,7 +410,114 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 # on_hide=lambda: not self.view.is_popup_visible() and self.view.window().run_command("hide_panel", {"cancel": True}),
             )
 
+        elif LABEL_MODE == "sheet":
+            visible_region = views.get(self.view) or self.view.visible_region()
+
+            text = self.view.export_to_html(visible_region, minihtml=True)
+
+            line_padding_bottom = self.view.settings().get("line_padding_bottom", 0)
+            line_padding_top = self.view.settings().get("line_padding_top", 0)
+            line_height = int(
+                self.view.line_height() + line_padding_bottom + line_padding_top
+            )
+
+            offset_region = visible_region.a
+            html_positions = get_element_html_positions(
+                text,
+                [p[1] - offset_region for p in positions],
+            )
+
+            style = self.view.style()
+            print(style)
+
+            positions = sorted(positions, key=lambda x: x[1], reverse=True)
+            for i, (c, a, b) in enumerate(positions):
+                html_position = html_positions.get(a - offset_region)
+                if not html_position:
+                    continue
+
+                color = (
+                    (style["pinkish"] if not self.extend else style["yellowish"])
+                    if c.startswith(search)
+                    else style["caret"]
+                )
+
+                add_style = {"background-color": style["inactive_selection"]}
+                if self.extend == 2:
+                    add_style = {
+                        "background-color": style["selection"],
+                        "border": f"1px solid {style['yellowish']}",
+                        "padding": "-1px",
+                    }
+
+                label = c[len(search) : len(search) + 1] or c[-1]
+                start, size = html_position
+
+                if "<br" in text[start : start + size]:
+                    size = 0  # Jump to end of line
+
+                text = (
+                    text[:start]
+                    + "<style>html, body {padding: 0px; margin: 0px}</style>"
+                    + make_element(
+                        "span",
+                        label,
+                        {
+                            "color": color,
+                            "font-style": "normal",
+                            "font-weight": "bold",
+                            "border-radius": "5px",
+                            **add_style,
+                        },
+                    )
+                    + text[start + size :]
+                )
+
+            text = text.replace("<br>", "<br>&#8203;")
+
+            scroll_x, scroll_y = self.view.viewport_position()
+            gutter_width = scroll_x - self.view.window_to_layout((0, 0))[0]
+
+            padding_top = self.view.text_to_layout(visible_region.a)[1] - scroll_y
+
+            # print(self.view.text_to_layout(visible_region.a))
+            # print(self.view.text_to_window(visible_region.a))
+            # print(self.view.viewport_position())
+            # print(self.view.layout_to_window((0, 0)))
+            # print(self.view.window_to_layout((0, 0)))
+
+            content = make_element(
+                "div",
+                text,
+                {
+                    "line-height": f"{line_height}px",
+                    "padding-left": f"{gutter_width - scroll_x}px",
+                    "padding-top": f"{padding_top}px",
+                },
+                True,
+            )
+            if (
+                self.view.id() not in sheets_per_view
+                or not sheets_per_view[self.view.id()].is_selected()
+            ):
+                sheet = self.view.window().new_html_sheet(
+                    "Labels",
+                    "",
+                    flags=4,
+                    group=self.view.sheet().group(),
+                )
+                sheets_per_view[self.view.id()] = sheet
+
+            sheets_per_view[self.view.id()].set_contents(content)
+
         else:
+            if not syntax_per_view.get(self.view.id(), "").endswith(
+                "GoToChar.tmLanguage"
+            ):
+                syntax_per_view[self.view.id()] = self.view.syntax()
+                self.view.set_syntax_file(
+                    "Packages/sublime-select-next-char/GoToChar.tmLanguage"
+                )
             self.view.add_regions(
                 "select_char_jump",
                 [sublime.Region(a, b) for _, a, b in positions],
@@ -372,8 +535,21 @@ class SelectCharSelectionRemoveLabelsCommand(sublime_plugin.TextCommand):
                 phantom_sets[self.view.id()].update([])
         elif LABEL_MODE == "popup":
             self.view.hide_popup()
+        elif LABEL_MODE == "sheet":
+            if self.view.id() in sheets_per_view:
+                sheets_per_view.pop(self.view.id()).close()
+
+            self.view.window().focus_view(active_view[self.view.window()])
         else:
             # TODO: clean redo stack but not undo
             self.view.erase_regions("select_char_jump")
             self.view.end_edit(edit)
             self.view.run_command("undo")
+
+            if self.view.id() in syntax_per_view:
+                self.view.set_syntax_file(syntax_per_view[self.view.id()])
+
+
+def make_element(tag, content, style, is_content_html=False):
+    style = ";".join(f"{name}: {value}" for name, value in style.items())
+    return f'<{tag} style="{style}">{content if is_content_html else html.escape(content)}</{tag}>'
