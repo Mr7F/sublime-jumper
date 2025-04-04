@@ -12,10 +12,11 @@ In that mode, you can press
 - "space" then the label to select everything between the cursor and the target label excluded (the color will change)
 - "tab" then the label to select everything between the cursor and the target label included (the color will change)
 
-- <shortcut> + a + x: jump to the "a" labelled "x"
-- <shortcut> + a + " " + x: select between the cursor and the "a" labelled "x" ("a" excluded)
-- <shortcut> + a + "tab" + x: select between the cursor and the "a" labelled "x" ("a" included)
-- <shortcut> + " " + x: jump to the beginning of the non-empty line labelled "x"
+Example:
+- `<shortcut> + a + x`: jump to the "a" labelled "x"
+- `<shortcut> + a + " " + x`: select between the cursor and the "a" labelled "x" ("a" excluded)
+- `<shortcut> + a + "tab" + x`: select between the cursor and the "a" labelled "x" ("a" included)
+- `<shortcut> + " " + x`: jump to the beginning of the non-empty line labelled "x"
 
 If the charset is not big enough, you can press many keys to jump where you want.
 
