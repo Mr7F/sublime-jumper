@@ -151,9 +151,11 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 
     CHARSET = string.ascii_letters + string.digits + "@%${}&!#[]':-\"/|;^_="
 
-    def run(self, edit, character, extend=False):
+    def run(self, edit, character, extend=False, is_regex=False):
         global views, sheets_per_view, active_view
+
         self.extend = int(extend)
+        self.is_regex = is_regex
 
         views = {v: v.visible_region() for v in self._active_views if v is not None}
         active_view[self.view.window()] = self.view.window().active_view()
@@ -210,7 +212,10 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         else:
             # TODO: use `within=visible_region` instead
             # >>> print(self.view.find_all.__doc__)
-            matches = view.find_all(char, sublime.LITERAL)
+            if self.is_regex:
+                matches = view.find_all(char)
+            else:
+                matches = view.find_all(char, sublime.LITERAL)
 
         a, b = sorted(visible_region.to_tuple())
         matches = [m for m in matches if m.a >= a and m.b < b]
