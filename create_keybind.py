@@ -1,5 +1,5 @@
-import string
 import json
+import string
 
 filenames = [
     "Default (Linux).sublime-keymap",
@@ -47,7 +47,7 @@ data = [
 ]
 
 
-def add_key(char, c):
+def add_key(character, c):
     global data
     for previous, next, extend in (
         (shortcut_previous, shortcut_next, False),
@@ -57,22 +57,22 @@ def add_key(char, c):
             {
                 "keys": [previous, c],
                 "command": "select_next_char",
-                "args": {"char": char, "direction": "previous", "extend": extend},
+                "args": {"character": character, "direction": "previous", "extend": extend},
             },
             {
                 "keys": [next, c],
                 "command": "select_next_char",
-                "args": {"char": char, "extend": extend},
+                "args": {"character": character, "extend": extend},
             },
             {
                 "keys": [previous, "shift", c],
                 "command": "select_next_char",
-                "args": {"char": char, "direction": "previous", "extend": extend},
+                "args": {"character": character, "direction": "previous", "extend": extend},
             },
             {
                 "keys": [next, "shift", c],
                 "command": "select_next_char",
-                "args": {"char": char, "extend": extend},
+                "args": {"character": character, "extend": extend},
             },
         ]
 
@@ -84,12 +84,12 @@ def add_key(char, c):
             {
                 "keys": [shortcut, c],
                 "command": "select_char_selection",
-                "args": {"char": char, "extend": extend},
+                "args": {"character": character, "extend": extend},
             },
             {
                 "keys": [shortcut, "shift", c],
                 "command": "select_char_selection",
-                "args": {"char": char, "extend": extend},
+                "args": {"character": character, "extend": extend},
             },
         ]
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     add_key("enter", "enter")
 
     # https://www.sublimetext.com/docs/key_bindings.html#key-names
-    for key, char in [
+    for key, character in [
         ("plus", "+"),
         ("keypad_plus", "+"),
         ("keypad_multiply", "*"),
@@ -113,7 +113,7 @@ if __name__ == "__main__":
         ("keypad_period", "."),
     ]:
         # sublime.log_input(True)
-        add_key(char, key)
+        add_key(character, key)
 
     for i in range(10):
         add_key(str(i), "keypad" + str(i))

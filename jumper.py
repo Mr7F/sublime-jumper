@@ -1,8 +1,11 @@
-import sublime, sublime_plugin
-from itertools import chain
-from collections import defaultdict
-import string
 import html
+import string
+from collections import defaultdict
+from itertools import chain
+
+import sublime
+import sublime_plugin
+
 from .utils import get_element_html_positions
 
 ALLOW_N_CHARS_LABEL = True
@@ -17,11 +20,11 @@ active_view = {}
 views = {}
 
 
-def _select_next(view, selection, direction, char, extend=False):
+def _select_next(view, selection, direction, character, extend=False):
     a, b = sorted(selection.to_tuple())
 
-    if char in "'\"`":
-        char = "'\"`"
+    if character in "'\"`":
+        character = "'\"`"
 
     itr = (
         chain(range(b, view.size(), 1000), range(0, b, 1000))
@@ -39,7 +42,7 @@ def _select_next(view, selection, direction, char, extend=False):
         if direction != "next":
             file_content = reversed(file_content)
 
-        char_idx = next((i for i, c in enumerate(file_content) if c in char), None)
+        char_idx = next((i for i, c in enumerate(file_content) if c in character), None)
         if char_idx is None:
             continue
 
@@ -62,19 +65,16 @@ def _select_next(view, selection, direction, char, extend=False):
 class SelectNextCharCommand(sublime_plugin.TextCommand):
     """Go to the character and select it."""
 
-    def run(self, edit, char, direction="next", extend=False):
+    def run(self, edit, character, direction="next", extend=False):
         for selection in list(self.view.sel()):
-            _select_next(self.view, selection, direction, char, extend)
+            _select_next(self.view, selection, direction, character, extend)
 
         selections = self.view.sel()
         if len(selections) == 1:
             self.view.show(selections[0])
 
 
-class SelectNextCharSelectionCommand(
-    sublime_plugin.TextCommand,
-    sublime_plugin.WindowCommand,
-):
+class SelectNextCharSelectionCommand(sublime_plugin.TextCommand):
     """Go to the next string matching the current selection and select it."""
 
     def run(self, edit, direction="next", keep_selection=False):
@@ -146,7 +146,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 
     CHARSET = string.ascii_letters + string.digits + "@%${}&!#[]':-\"/|;^_="
 
-    def run(self, edit, char, extend=False):
+    def run(self, edit, character, extend=False):
         global views, sheets_per_view, active_view
         self.extend = extend
 
@@ -158,7 +158,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
                 sheet.close()
             sheets_per_view = {}
 
-        self.char = char
+        self.char = character
 
         self.edit = edit
         self.charset = list(
@@ -176,7 +176,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
             assert len(set(self.charset)) == len(self.charset)
 
         self.exit = False
-        self._find_match_views(char)
+        self._find_match_views(character)
 
         self.view.window().show_input_panel(
             "Select to" if extend else "Jump to",
@@ -428,7 +428,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
             )
 
             style = self.view.style()
-            print(style)
+            # print(style)
 
             positions = sorted(positions, key=lambda x: x[1], reverse=True)
             for i, (c, a, b) in enumerate(positions):

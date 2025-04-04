@@ -1,5 +1,7 @@
 import re
+
 a = 1
+
 
 def get_next_element(html, index):
     # Return the size of the next element (in HTML code and in inner text)
@@ -39,7 +41,6 @@ def get_element_html_positions(html, indexes):
 
             i += html_size
             text_index += text_size
-
 
     return found
 
