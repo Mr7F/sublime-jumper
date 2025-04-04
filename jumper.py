@@ -50,6 +50,8 @@ def _select_next(view, selection, direction, character, extend=False):
             target_idx = idx + char_idx
         else:
             target_idx = idx - char_idx - 1
+            if extend and target_idx < a:
+                target_idx += 1
 
         view.sel().subtract(selection)
         end_target = target_idx
