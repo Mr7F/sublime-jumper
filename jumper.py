@@ -153,7 +153,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, character, extend=False):
         global views, sheets_per_view, active_view
-        self.extend = extend
+        self.extend = int(extend)
 
         views = {v: v.visible_region() for v in self._active_views if v is not None}
         active_view[self.view.window()] = self.view.window().active_view()
@@ -185,7 +185,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 
         self.view.window().show_input_panel(
             "Select to" if extend else "Jump to",
-            "",
+            " " if self.extend else "",
             self.on_cancel,
             self.on_change,
             self.on_cancel,
