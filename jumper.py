@@ -22,7 +22,7 @@ views = {}
 
 def _select_next(view, selection, direction, character, extend=False):
     a, b = sorted(selection.to_tuple())
-    if direction == "next":
+    if direction == "next" and not extend:
         a += 1
         b += 1
 
@@ -60,8 +60,8 @@ def _select_next(view, selection, direction, character, extend=False):
         end_target = target_idx
         # end_target = target_idx + 1
         if extend:
-            target_idx = min(target_idx, a)
-            end_target = max(end_target, b)
+            target_idx = min(target_idx, a, b)
+            end_target = max(end_target, a, b)
 
         view.sel().add(sublime.Region(target_idx, end_target))
         break
