@@ -22,6 +22,9 @@ views = {}
 
 def _select_next(view, selection, direction, character, extend=False):
     a, b = sorted(selection.to_tuple())
+    if direction == "next":
+        a += 1
+        b += 1
 
     if character in "'\"`":
         character = "'\"`"
