@@ -1,12 +1,16 @@
-# Sublime - Select Next Char
-Press a shortcut, then a key to select the next / previous character corresponding to the key pressed.
+# Sublime - Jumper
+## Select Next Char
+Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope),
+the command `select_next_char`, go to the next / previous occurrence of the character that start a word.
 
-Because of the way shortcut work in sublime, you need to run `create_keybind.py` in order to generate the shortcut file.
+You can also extend the selection up to the next / previous occurrence of the character that start a word.
 
-An other shortcut can select the next / previous text matching the current selection.
+The settings `"quick_jump_show_word_bounds": true,` will show the characters where you can jump to with that command
+(only on the current line by default, to show them all, set `quick_jump_show_all_lines` to true).
 
 
-Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMotion), it's also possible to press a shortcut,
+## Go To Anywhere
+Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMotion) and [Ace Jump](https://github.com/acejump/AceJump) it's also possible to press a shortcut,
 followed by a key, to highlight all matching character with a small label. Pressing the label jump to that position.
 In that mode, you can press
 - "space" then the label to select everything between the cursor and the target label excluded (the color will change)
@@ -35,10 +39,19 @@ You can type
 
 The jump work when many files are open (but not the extend, because we can not edit 2 files at the same time).
 
-# Technical
+## Technical
 Sublime text doesn't support "phantom on top of text", so the default implementation use HTML sheet, but you can change in the code if
 you prefer something else:
 - phantoms: the text will shift to the right
 - buffer: we will change the buffer, but the "redo" history can not be cleaned
 - popup: we show a popup, but you will see a shadow and you can not jump to the first line
 - sheet: the default implementation, only drawback is that when you are in "label typing" mode, you can not select text with the mousse
+
+# Go To Same Selection
+The command `select_next_same_selection` will select the next / previous text matching the current selection
+(you can also add it to the current selection, and it will be the same as `find_under_expand`).
+
+# TODO
+- Remove `create_keybind.py` and add keybind in the readme once https://github.com/sublimehq/sublime_text/issues/6650 is fixed
+- Find a way to add letter as row number to jump faster
+- "Go To Anywhere", when clicking on a tab, the input panel should close

@@ -27,21 +27,21 @@ shortcut_next_selection_extend = "alt+ctrl+shift+super+2"
 data = [
     {
         "keys": [shortcut_previous_selection],
-        "command": "select_next_char_selection",
+        "command": "select_next_same_selection",
         "args": {"direction": "previous"},
     },
     {
         "keys": [shortcut_next_selection],
-        "command": "select_next_char_selection",
+        "command": "select_next_same_selection",
     },
     {
         "keys": [shortcut_previous_selection_extend],
-        "command": "select_next_char_selection",
+        "command": "select_next_same_selection",
         "args": {"direction": "previous", "keep_selection": True},
     },
     {
         "keys": [shortcut_next_selection_extend],
-        "command": "select_next_char_selection",
+        "command": "select_next_same_selection",
         "args": {"keep_selection": True},
     },
 ]
