@@ -208,6 +208,8 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         self.exit = True
 
         self.view.window().run_command("hide_panel", {"cancel": True})
+        self.view.window().focus_view(active_view[self.view.window()])
+
         for view in views:
             view.run_command("select_char_selection_remove_labels")
 
@@ -322,8 +324,6 @@ class SelectCharSelectionRemoveLabelsCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         if self.view.id() in sheets_per_view:
             sheets_per_view.pop(self.view.id()).close()
-
-        self.view.window().focus_view(active_view[self.view.window()])
 
 
 def make_element(tag, content, style, is_content_html=False):

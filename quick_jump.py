@@ -161,10 +161,10 @@ class SelectNextSameSelectionCommand(sublime_plugin.TextCommand):
 class SelectionShowQuickJumpWordListener(sublime_plugin.EventListener):
     """Add a line bellow the characters for which we can do a quick jump."""
 
-    def run(self, edit):
-        pass
+    def on_deactivated(self, view):
+        view.add_regions("jumper_quick_jump", [])
 
-    def on_selection_modified(self, view):
+    def on_selection_modified_async(self, view):
         if not view.settings().get("quick_jump_show_word_bounds"):
             return
 
