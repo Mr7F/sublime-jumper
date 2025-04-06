@@ -8,17 +8,9 @@ import sublime_plugin
 
 from .utils import get_element_html_positions
 
-ALLOW_N_CHARS_LABEL = True
-LABEL_MODE = "sheet"
-assert LABEL_MODE in ("sheet", "phantoms", "popup", "buffer")
-assert not ALLOW_N_CHARS_LABEL or LABEL_MODE != "phantoms"
-syntax_per_view = {}
-phantom_sets = {}
 sheets_per_view = {}
 active_view = {}
 views = {}
-
-
 
 
 class SelectCharSelectionCommand(sublime_plugin.TextCommand):
@@ -41,10 +33,9 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         views = {v: v.visible_region() for v in self._active_views if v is not None}
         active_view[self.view.window()] = self.view.window().active_view()
 
-        if LABEL_MODE == "sheet":
-            for sheet in sheets_per_view.values():
-                sheet.close()
-            sheets_per_view = {}
+        for sheet in sheets_per_view.values():
+            sheet.close()
+        sheets_per_view = {}
 
         self.char = character
 
@@ -55,13 +46,12 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 
         # Show many jump characters if needed
         self.jump_next_c = "."
-        if ALLOW_N_CHARS_LABEL:
-            self.charset = [c for c in self.charset if c != "."]
-            base_charset = self.charset.copy()
-            for i in range(1, 5):
-                self.charset.extend([i * self.jump_next_c + c for c in base_charset])
+        self.charset = [c for c in self.charset if c != "."]
+        base_charset = self.charset.copy()
+        for i in range(1, 5):
+            self.charset.extend([i * self.jump_next_c + c for c in base_charset])
 
-            assert len(set(self.charset)) == len(self.charset)
+        assert len(set(self.charset)) == len(self.charset)
 
         self.exit = False
         self._find_match_views(character)
@@ -146,7 +136,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
         return res
 
     def on_change(self, value):
-        if value.strip() in self.positions or not ALLOW_N_CHARS_LABEL:
+        if value.strip() in self.positions:
             self.on_cancel()
 
         # Switch selection mode
@@ -208,7 +198,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 
             self.view.window().focus_view(target_view)
 
-        elif ALLOW_N_CHARS_LABEL:
+        else:
             # Update color of phantom
             self._show_labels(value)
 
@@ -227,218 +217,113 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, positions, search, extend):
         self.extend = extend
-        if LABEL_MODE == "phantoms":
-            if self.view.id() not in phantom_sets:
-                phantom_sets[self.view.id()] = sublime.PhantomSet(self.view)
 
-            positions = sorted(positions, key=lambda x: x[1], reverse=True)
+        visible_region = views.get(self.view) or self.view.visible_region()
 
-            phantoms = []
-            for i, (c, a, b) in enumerate(positions):
-                color = "#c778dd" if c.startswith(search) else "#abb2bf"
-                phantoms.append(
-                    sublime.Phantom(
-                        sublime.Region(a, b),
-                        "".join(
-                            f"""<span style='color: #abb2bf'>{a}</span>"""
-                            for a in c[: len(search)]
-                        )
-                        + "".join(
-                            f"""<span style='color: {color}'>{a}</span>"""
-                            for a in c[len(search) :]
-                        ),
-                        sublime.LAYOUT_INLINE,
-                    ),
+        text = self.view.export_to_html(visible_region, minihtml=True)
+
+        line_padding_bottom = self.view.settings().get("line_padding_bottom", 0)
+        line_padding_top = self.view.settings().get("line_padding_top", 0)
+        line_height = int(
+            self.view.line_height() + line_padding_bottom + line_padding_top
+        )
+
+        offset_region = visible_region.a
+        html_positions = get_element_html_positions(
+            text,
+            [p[1] - offset_region for p in positions],
+        )
+
+        style = self.view.style()
+        # print(style)
+
+        positions = sorted(positions, key=lambda x: x[1], reverse=True)
+        for i, (c, a, b) in enumerate(positions):
+            html_position = html_positions.get(a - offset_region)
+            if not html_position:
+                continue
+
+            color = (
+                (style["pinkish"] if not self.extend else style["yellowish"])
+                if c.startswith(search)
+                else style["caret"]
+            )
+
+            add_style = {"background-color": style["inactive_selection"]}
+            if self.extend == 2:
+                add_style = {
+                    "background-color": style["selection"],
+                    "border": f"1px solid {style['yellowish']}",
+                    "padding": "-1px",
+                }
+
+            label = c[len(search) : len(search) + 1] or c[-1]
+            start, size = html_position
+
+            if "<br" in text[start : start + size]:
+                size = 0  # Jump to end of line
+
+            text = (
+                text[:start]
+                + "<style>html, body {padding: 0px; margin: 0px}</style>"
+                + make_element(
+                    "span",
+                    label,
+                    {
+                        "color": color,
+                        "font-style": "normal",
+                        "font-weight": "bold",
+                        "border-radius": "5px",
+                        **add_style,
+                    },
                 )
-
-            phantom_sets[self.view.id()].update(phantoms)
-
-        elif LABEL_MODE == "popup":
-            # text = html.escape(self.view.substr(self.view.visible_region()))
-            # text = text.replace(" ", "&nbsp;").replace("\n", "<br/>&#8203;")
-
-            visible_region = self.view.visible_region()
-
-            text = self.view.export_to_html(visible_region, minihtml=True)
-
-            line_padding_bottom = self.view.settings().get("line_padding_bottom", 0)
-            line_padding_top = self.view.settings().get("line_padding_top", 0)
-            line_height = (
-                self.view.line_height() + line_padding_bottom + line_padding_top
+                + text[start + size :]
             )
 
-            offset_region = visible_region.a
+        text = text.replace("<br>", "<br>&#8203;")
 
-            html_positions = get_element_html_positions(
-                text,
-                [p[1] - offset_region for p in positions],
+        scroll_x, scroll_y = self.view.viewport_position()
+        gutter_width = scroll_x - self.view.window_to_layout((0, 0))[0]
+
+        padding_top = self.view.text_to_layout(visible_region.a)[1] - scroll_y
+
+        # print(self.view.text_to_layout(visible_region.a))
+        # print(self.view.text_to_window(visible_region.a))
+        # print(self.view.viewport_position())
+        # print(self.view.layout_to_window((0, 0)))
+        # print(self.view.window_to_layout((0, 0)))
+
+        content = make_element(
+            "div",
+            text,
+            {
+                "line-height": f"{line_height}px",
+                "padding-left": f"{gutter_width - scroll_x}px",
+                "padding-top": f"{padding_top}px",
+            },
+            True,
+        )
+        if (
+            self.view.id() not in sheets_per_view
+            or not sheets_per_view[self.view.id()].is_selected()
+        ):
+            sheet = self.view.window().new_html_sheet(
+                "Labels",
+                "",
+                flags=4,
+                group=self.view.sheet().group(),
             )
+            sheets_per_view[self.view.id()] = sheet
 
-            positions = sorted(positions, key=lambda x: x[1], reverse=True)
-            for i, (c, a, b) in enumerate(positions):
-                html_position = html_positions.get(a - offset_region)
-                if not html_position:
-                    continue
-
-                color = "#c778dd" if c.startswith(search) else "#abb2bf"
-                label = c[len(search) : len(search) + 1] or c[-1]
-                start, size = html_position
-
-                text = (
-                    text[:start]
-                    + f"<span style='color: {color}; font-style: normal; font-weight: bold'>{html.escape(label)}</span>"
-                    + text[start + size :]
-                )
-
-            text = text.replace("<br>", "<br>&#8203;")
-
-            self.view.show_popup(
-                f"<style>html {{padding: -9px -10px}}</style><div style='background-color: var(--background); line-height: {line_height}px; padding: -{line_height + 12 - 10}px 10px; padding-right: 5000px'>{text}</div>",
-                location=visible_region.a,
-                max_width=self.view.viewport_extent()[0],
-                max_height=self.view.viewport_extent()[1],
-                flags=32,
-                # on_hide=lambda: not self.view.is_popup_visible() and self.view.window().run_command("hide_panel", {"cancel": True}),
-            )
-
-        elif LABEL_MODE == "sheet":
-            visible_region = views.get(self.view) or self.view.visible_region()
-
-            text = self.view.export_to_html(visible_region, minihtml=True)
-
-            line_padding_bottom = self.view.settings().get("line_padding_bottom", 0)
-            line_padding_top = self.view.settings().get("line_padding_top", 0)
-            line_height = int(
-                self.view.line_height() + line_padding_bottom + line_padding_top
-            )
-
-            offset_region = visible_region.a
-            html_positions = get_element_html_positions(
-                text,
-                [p[1] - offset_region for p in positions],
-            )
-
-            style = self.view.style()
-            # print(style)
-
-            positions = sorted(positions, key=lambda x: x[1], reverse=True)
-            for i, (c, a, b) in enumerate(positions):
-                html_position = html_positions.get(a - offset_region)
-                if not html_position:
-                    continue
-
-                color = (
-                    (style["pinkish"] if not self.extend else style["yellowish"])
-                    if c.startswith(search)
-                    else style["caret"]
-                )
-
-                add_style = {"background-color": style["inactive_selection"]}
-                if self.extend == 2:
-                    add_style = {
-                        "background-color": style["selection"],
-                        "border": f"1px solid {style['yellowish']}",
-                        "padding": "-1px",
-                    }
-
-                label = c[len(search) : len(search) + 1] or c[-1]
-                start, size = html_position
-
-                if "<br" in text[start : start + size]:
-                    size = 0  # Jump to end of line
-
-                text = (
-                    text[:start]
-                    + "<style>html, body {padding: 0px; margin: 0px}</style>"
-                    + make_element(
-                        "span",
-                        label,
-                        {
-                            "color": color,
-                            "font-style": "normal",
-                            "font-weight": "bold",
-                            "border-radius": "5px",
-                            **add_style,
-                        },
-                    )
-                    + text[start + size :]
-                )
-
-            text = text.replace("<br>", "<br>&#8203;")
-
-            scroll_x, scroll_y = self.view.viewport_position()
-            gutter_width = scroll_x - self.view.window_to_layout((0, 0))[0]
-
-            padding_top = self.view.text_to_layout(visible_region.a)[1] - scroll_y
-
-            # print(self.view.text_to_layout(visible_region.a))
-            # print(self.view.text_to_window(visible_region.a))
-            # print(self.view.viewport_position())
-            # print(self.view.layout_to_window((0, 0)))
-            # print(self.view.window_to_layout((0, 0)))
-
-            content = make_element(
-                "div",
-                text,
-                {
-                    "line-height": f"{line_height}px",
-                    "padding-left": f"{gutter_width - scroll_x}px",
-                    "padding-top": f"{padding_top}px",
-                },
-                True,
-            )
-            if (
-                self.view.id() not in sheets_per_view
-                or not sheets_per_view[self.view.id()].is_selected()
-            ):
-                sheet = self.view.window().new_html_sheet(
-                    "Labels",
-                    "",
-                    flags=4,
-                    group=self.view.sheet().group(),
-                )
-                sheets_per_view[self.view.id()] = sheet
-
-            sheets_per_view[self.view.id()].set_contents(content)
-
-        else:
-            if not syntax_per_view.get(self.view.id(), "").endswith(
-                "GoToChar.tmLanguage"
-            ):
-                syntax_per_view[self.view.id()] = self.view.syntax()
-                self.view.set_syntax_file(
-                    "Packages/sublime-select-next-char/GoToChar.tmLanguage"
-                )
-            self.view.add_regions(
-                "select_char_jump",
-                [sublime.Region(a, b) for _, a, b in positions],
-                "region.bluish",
-                flags=sublime.DRAW_NO_FILL,
-            )
-            for c, a, b in positions:
-                self.view.replace(edit, sublime.Region(a, b), c)
+        sheets_per_view[self.view.id()].set_contents(content)
 
 
 class SelectCharSelectionRemoveLabelsCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        if LABEL_MODE == "phantoms":
-            if self.view.id() in phantom_sets:
-                phantom_sets[self.view.id()].update([])
-        elif LABEL_MODE == "popup":
-            self.view.hide_popup()
-        elif LABEL_MODE == "sheet":
-            if self.view.id() in sheets_per_view:
-                sheets_per_view.pop(self.view.id()).close()
+        if self.view.id() in sheets_per_view:
+            sheets_per_view.pop(self.view.id()).close()
 
-            self.view.window().focus_view(active_view[self.view.window()])
-        else:
-            # TODO: clean redo stack but not undo
-            self.view.erase_regions("select_char_jump")
-            self.view.end_edit(edit)
-            self.view.run_command("undo")
-
-            if self.view.id() in syntax_per_view:
-                self.view.set_syntax_file(syntax_per_view[self.view.id()])
+        self.view.window().focus_view(active_view[self.view.window()])
 
 
 def make_element(tag, content, style, is_content_html=False):

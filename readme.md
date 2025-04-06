@@ -8,6 +8,7 @@ You can also extend the selection up to the next / previous occurrence of the ch
 The settings `"quick_jump_show_word_bounds": true,` will show the characters where you can jump to with that command
 (only on the current line by default, to show them all, set `quick_jump_show_all_lines` to true).
 
+You can also just jump to the next / previous occurrence of the character even if it does not start a word.
 
 ## Go To Anywhere
 Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMotion) and [Ace Jump](https://github.com/acejump/AceJump) it's also possible to press a shortcut,
