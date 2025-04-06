@@ -203,11 +203,11 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             return
         self.exit = True
 
-        self.view.window().run_command("hide_panel", {"cancel": True})
-        self.view.window().focus_view(active_view[self.view.window()])
-
         for view in views:
             view.run_command("select_char_selection_remove_labels")
+
+        self.view.window().run_command("hide_panel", {"cancel": True})
+        self.view.window().focus_view(active_view[self.view.window()])
 
 
 class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):

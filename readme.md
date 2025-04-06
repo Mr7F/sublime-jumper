@@ -56,3 +56,4 @@ The command `select_next_same_selection` will select the next / previous text ma
 - Remove `create_keybind.py` and add keybind in the readme once https://github.com/sublimehq/sublime_text/issues/6650 is fixed
 - Find a way to add letter as row number to jump faster
 - "Go To Anywhere", when clicking on a tab, the input panel should close
+- "Go To Anywhere", read `word_wrap` settings (set to "auto")
