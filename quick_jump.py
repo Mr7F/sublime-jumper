@@ -85,7 +85,7 @@ def _select_next(view, selection, direction, character, extend=False, start_word
         break
 
 
-class SelectNextCharCommand(sublime_plugin.TextCommand):
+class JumperQuickJumpCommand(sublime_plugin.TextCommand):
     """Go to the character."""
 
     def run(self, edit, character, direction="next", extend=False, start_word=True):
@@ -97,7 +97,7 @@ class SelectNextCharCommand(sublime_plugin.TextCommand):
             self.view.show(selections[0])
 
 
-class SelectNextSameSelectionCommand(sublime_plugin.TextCommand):
+class JumperSelectNextSelectionMatchCommand(sublime_plugin.TextCommand):
     """Go to the next string matching the current selection and select it."""
 
     def run(self, edit, direction="next", keep_selection=False):
@@ -168,10 +168,10 @@ class SelectionShowQuickJumpWordListener(sublime_plugin.EventListener):
         view.add_regions("jumper_quick_jump", [])
 
     def on_selection_modified_async(self, view):
-        if not view.settings().get("quick_jump_show_word_bounds"):
+        if not view.settings().get("jumper_quick_jump_show_word_bounds"):
             return
 
-        all_lines = view.settings().get("quick_jump_show_all_lines")
+        all_lines = view.settings().get("jumper_quick_jump_show_all_lines")
 
         if len(view.sel()) != 1:
             view.add_regions("jumper_quick_jump", [])

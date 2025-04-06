@@ -1,12 +1,12 @@
 # Sublime - Jumper
-## Select Next Char
+## Quick Jump
 Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope),
 the command `select_next_char`, go to the next / previous occurrence of the character that start a word.
 
 You can also extend the selection up to the next / previous occurrence of the character that start a word.
 
-The settings `"quick_jump_show_word_bounds": true,` will show the characters where you can jump to with that command
-(only on the current line by default, to show them all, set `quick_jump_show_all_lines` to true).
+The settings `"jumper_quick_jump_show_word_bounds": true,` will show the characters where you can jump to with that command
+(only on the current line by default, to show them all, set `jumper_quick_jump_show_all_lines` to true).
 
 You can also just jump to the next / previous occurrence of the character even if it does not start a word.
 
@@ -30,7 +30,7 @@ If the charset is not big enough, you can press many keys to jump where you want
 Settings
 ```json
 {
-    "select_next_char_charset": "tnseriaogmdhc,x.plfuwyvkbj:z123456789TNSERIAOGMDHCXPLFUWYVKBJ{}@%$&!#|^'-_=/;()"
+    "jumper_go_to_anywhere_charset": "tnseriaogmdhc,x.plfuwyvkbj:z123456789TNSERIAOGMDHCXPLFUWYVKBJ{}@%$&!#|^'-_=/;()"
 }
 ```
 
@@ -48,7 +48,7 @@ you prefer something else:
 - popup: we show a popup, but you will see a shadow and you can not jump to the first line
 - sheet: the default implementation, only drawback is that when you are in "label typing" mode, you can not select text with the mousse
 
-# Go To Same Selection
+# Select Next Selection Match
 The command `select_next_same_selection` will select the next / previous text matching the current selection
 (you can also add it to the current selection, and it will be the same as `find_under_expand`).
 

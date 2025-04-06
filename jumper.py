@@ -13,7 +13,7 @@ active_view = {}
 views = {}
 
 
-class SelectCharSelectionCommand(sublime_plugin.TextCommand):
+class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
     """Highlight all the characters visible on the screen, with a letter for each, press that letter to jump to the position.
 
     Similar package:
@@ -41,7 +41,7 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 
         self.edit = edit
         self.charset = list(
-            self.view.settings().get("select_next_char_charset") or self.CHARSET
+            self.view.settings().get("jumper_go_to_anywhere_charset") or self.CHARSET
         )
 
         # Show many jump characters if needed
@@ -81,15 +81,11 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
             # Find any quotes types
             matches = view.find_all(r"['\"`]")
         else:
-            # TODO: use `within=visible_region` instead
-            # >>> print(self.view.find_all.__doc__)
             if self.is_regex:
-                matches = view.find_all(char)
+                matches = view.find_all(char, within=visible_region)
             else:
-                matches = view.find_all(char, sublime.LITERAL)
+                matches = view.find_all(char, sublime.LITERAL, within=visible_region)
 
-        a, b = sorted(visible_region.to_tuple())
-        matches = [m for m in matches if m.a >= a and m.b < b]
         matches = sorted(matches, key=lambda x: abs(x.begin() - start_cursor))
         matches = matches[: len(charset)]
         return dict(zip(charset, matches))
@@ -159,6 +155,8 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
 
         if value in self.positions:
             target_view = self.positions[value][1]
+            self.view.window().focus_view(target_view)
+
             if self.extend:
                 to_jump = []
                 for sel in target_view.sel():
@@ -195,8 +193,6 @@ class SelectCharSelectionCommand(sublime_plugin.TextCommand):
                 )
                 target_view.sel().add(to_jump)
                 target_view.show(to_jump)
-
-            self.view.window().focus_view(target_view)
 
         else:
             # Update color of phantom

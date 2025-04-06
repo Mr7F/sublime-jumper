@@ -27,21 +27,21 @@ shortcut_next_selection_extend = "alt+ctrl+shift+super+2"
 data = [
     {
         "keys": [shortcut_previous_selection],
-        "command": "select_next_same_selection",
+        "command": "jumper_select_next_selection_match",
         "args": {"direction": "previous"},
     },
     {
         "keys": [shortcut_next_selection],
-        "command": "select_next_same_selection",
+        "command": "jumper_select_next_selection_match",
     },
     {
         "keys": [shortcut_previous_selection_extend],
-        "command": "select_next_same_selection",
+        "command": "jumper_select_next_selection_match",
         "args": {"direction": "previous", "keep_selection": True},
     },
     {
         "keys": [shortcut_next_selection_extend],
-        "command": "select_next_same_selection",
+        "command": "jumper_select_next_selection_match",
         "args": {"keep_selection": True},
     },
 ]
@@ -56,22 +56,30 @@ def add_key(character, c):
         data += [
             {
                 "keys": [previous, c],
-                "command": "select_next_char",
-                "args": {"character": character, "direction": "previous", "extend": extend},
+                "command": "jumper_quick_jump",
+                "args": {
+                    "character": character,
+                    "direction": "previous",
+                    "extend": extend,
+                },
             },
             {
                 "keys": [next, c],
-                "command": "select_next_char",
+                "command": "jumper_quick_jump",
                 "args": {"character": character, "extend": extend},
             },
             {
                 "keys": [previous, "shift", c],
-                "command": "select_next_char",
-                "args": {"character": character, "direction": "previous", "extend": extend},
+                "command": "jumper_quick_jump",
+                "args": {
+                    "character": character,
+                    "direction": "previous",
+                    "extend": extend,
+                },
             },
             {
                 "keys": [next, "shift", c],
-                "command": "select_next_char",
+                "command": "jumper_quick_jump",
                 "args": {"character": character, "extend": extend},
             },
         ]
@@ -83,12 +91,12 @@ def add_key(character, c):
         data += [
             {
                 "keys": [shortcut, c],
-                "command": "select_char_selection",
+                "command": "jumper_go_to_anywhere",
                 "args": {"character": character, "extend": extend},
             },
             {
                 "keys": [shortcut, "shift", c],
-                "command": "select_char_selection",
+                "command": "jumper_go_to_anywhere",
                 "args": {"character": character, "extend": extend},
             },
         ]
