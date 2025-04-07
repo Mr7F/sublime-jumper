@@ -61,12 +61,13 @@ def add_key(character, c):
                     "character": character,
                     "direction": "previous",
                     "extend": extend,
+                    "start_word": False,
                 },
             },
             {
                 "keys": [next, c],
                 "command": "jumper_quick_jump",
-                "args": {"character": character, "extend": extend},
+                "args": {"character": character, "extend": extend, "start_word": False},
             },
             {
                 "keys": [previous, "shift", c],
@@ -75,12 +76,13 @@ def add_key(character, c):
                     "character": character,
                     "direction": "previous",
                     "extend": extend,
+                    "start_word": False,
                 },
             },
             {
                 "keys": [next, "shift", c],
                 "command": "jumper_quick_jump",
-                "args": {"character": character, "extend": extend},
+                "args": {"character": character, "extend": extend, "start_word": False},
             },
         ]
 

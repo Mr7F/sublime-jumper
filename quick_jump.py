@@ -1,7 +1,6 @@
 import re
 from itertools import chain
 
-
 import sublime
 import sublime_plugin
 
@@ -69,14 +68,26 @@ def _select_next(view, selection, direction, character, extend=False, start_word
 
         if direction == "next":
             target_idx = idx + char_idx
+            if extend and target_idx < a:
+                target_idx -= 1
         else:
             target_idx = idx - char_idx - 1
-            if extend and target_idx < a:
-                target_idx += 1
+
+        if direction == "next" and extend:
+            if start_word:
+                # Select until the end of the word
+                end_target = (
+                    view.word(target_idx).b
+                    if file_content[char_idx] not in word_separators
+                    else target_idx + 1
+                )
+            else:
+                # Select the character included
+                end_target = target_idx + 1
+        else:
+            end_target = target_idx
 
         view.sel().subtract(selection)
-        end_target = target_idx
-        # end_target = target_idx + 1
         if extend:
             target_idx = min(target_idx, a, b)
             end_target = max(end_target, a, b)

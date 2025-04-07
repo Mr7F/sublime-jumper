@@ -1,14 +1,14 @@
 # Sublime - Jumper
 ## Quick Jump
 Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope),
-the command `select_next_char`, go to the next / previous occurrence of the character that start a word.
+the command `jumper_quick_jump`, go to the next / previous occurrence of the character that start a word.
 
 You can also extend the selection up to the next / previous occurrence of the character that start a word.
 
 The settings `"jumper_quick_jump_show_word_bounds": true,` will show the characters where you can jump to with that command
 (only on the current line by default, to show them all, set `jumper_quick_jump_show_all_lines` to true).
 
-You can also just jump to the next / previous occurrence of the character even if it does not start a word.
+You can also just jump to the next / previous occurrence of the character even if it does not start a word (character included).
 
 ## Go To Anywhere
 Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMotion) and [Ace Jump](https://github.com/acejump/AceJump) it's also possible to press a shortcut,
@@ -51,6 +51,26 @@ you prefer something else:
 # Select Next Selection Match
 The command `select_next_same_selection` will select the next / previous text matching the current selection
 (you can also add it to the current selection, and it will be the same as `find_under_expand`).
+
+# Quick Scope
+Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope), each words get labelled by one letter inside of it,
+pressing a shortcut and then that letter will jump at the *start* of the word.
+
+```
+this is a test
+|    |  |  |
+
+```
+- `<shortcut> t`: jump to *start* of "this"
+- `<shortcut> i`: jump to *start* of "is"
+- `<shortcut> e`: jump to *start* of "test"
+
+To enable the highlight, set the settings `jumper_quick_scope` to true. Or, if you want to enable the feature only for the current line, set it to `"line"`.
+
+In comparison to "Quick Jump", there's no direction, it will try to cover as many word as possible and the label is not necessary the
+first letter of the word.
+
+You can also select until the matching word (that word included).
 
 # TODO
 - Remove `create_keybind.py` and add keybind in the readme once https://github.com/sublimehq/sublime_text/issues/6650 is fixed
