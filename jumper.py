@@ -5,7 +5,7 @@ from collections import defaultdict
 import sublime
 import sublime_plugin
 
-from .utils import get_element_html_positions
+from .utils import JumperLabel, get_element_html_positions
 
 sheets_per_view = {}
 active_view = {}
@@ -63,7 +63,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             self.on_cancel,
         )
 
-    def _find_match(self, char, view, charset) -> "dict[str, sublime.Region]":
+    def _find_match(self, char, view, charset) -> "dict[str, JumperLabel]":
         visible_region = views[view]
         start_cursor = (
             view.sel()[0].begin()
@@ -87,11 +87,11 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 
         matches = sorted(matches, key=lambda x: abs(x.begin() - start_cursor))
         matches = matches[: len(charset)]
-        return dict(zip(charset, matches))
+        return {c: JumperLabel(region, c) for c, region in zip(charset, matches)}
 
     def _find_match_views(self, char, search=""):
         """Find the matching chars in all active view and add labels."""
-        self.positions = {}
+        self.positions: "dict[str, tuple[JumperLabel, View]]" = {}
         done = 0
         for view in views:
             positions = self._find_match(char, view, self.charset[done:])
@@ -107,7 +107,10 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             view.run_command(
                 "select_char_selection_add_labels",
                 {
-                    "positions": [(c, m.a, m.b) for c, m in values],
+                    "positions": [
+                        (c, label.label_region.a, label.label_region.b)
+                        for c, label in values
+                    ],
                     "search": search,
                     "extend": self.extend,
                 },
@@ -156,42 +159,15 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             target_view = self.positions[value][1]
             self.view.window().focus_view(target_view)
 
-            if self.extend:
-                to_jump = []
-                for sel in target_view.sel():
-                    target_idx = self.positions[value][0].a
+            selection = list(target_view.sel())
+            target_view.sel().clear()
 
-                    if self.extend == 1 and target_idx < min(sel.a, sel.b):
-                        # Do not select the match
-                        target_idx += 1
-
-                    if self.extend == 2 and target_idx > min(sel.a, sel.b):
-                        # Select the match
-                        target_idx += 1
-
-                    to_jump.append(
-                        sublime.Region(
-                            min(target_idx, sel.a, sel.b),
-                            max(target_idx, sel.a, sel.b),
-                        )
-                    )
-
-                target_view.sel().clear()
-                for r in to_jump:
-                    target_view.sel().add(r)
-
-                target_view.show(to_jump[0])
-
-            else:
-                for view in views:
-                    view.sel().clear()
-
-                to_jump = sublime.Region(
-                    self.positions[value][0].a,
-                    self.positions[value][0].a,
+            for sel in selection:
+                self.positions[value][0].jump_to(
+                    self.view, sel, bool(self.extend), self.extend == 2
                 )
-                target_view.sel().add(to_jump)
-                target_view.show(to_jump)
+
+            target_view.show(target_view.sel()[0])
 
         else:
             # Update color of phantom

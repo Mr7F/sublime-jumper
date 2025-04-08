@@ -1,15 +1,4 @@
 # Sublime - Jumper
-## Quick Jump
-Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope),
-the command `jumper_quick_jump`, go to the next / previous occurrence of the character that start a word.
-
-You can also extend the selection up to the next / previous occurrence of the character that start a word.
-
-The settings `"jumper_quick_jump_show_word_bounds": true,` will show the characters where you can jump to with that command
-(only on the current line by default, to show them all, set `jumper_quick_jump_show_all_lines` to true).
-
-You can also just jump to the next / previous occurrence of the character even if it does not start a word (character included).
-
 ## Go To Anywhere
 Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMotion) and [Ace Jump](https://github.com/acejump/AceJump) it's also possible to press a shortcut,
 followed by a key, to highlight all matching character with a small label. Pressing the label jump to that position.
@@ -48,16 +37,12 @@ you prefer something else:
 - popup: we show a popup, but you will see a shadow and you can not jump to the first line
 - sheet: the default implementation, only drawback is that when you are in "label typing" mode, you can not select text with the mousse
 
-# Select Next Selection Match
-The command `select_next_same_selection` will select the next / previous text matching the current selection
-(you can also add it to the current selection, and it will be the same as `find_under_expand`).
-
-# Quick Scope
+## Quick Scope
 Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope), each words get labelled by one letter inside of it,
-pressing a shortcut and then that letter will jump at the *start* of the word.
+pressing a shortcut and then that letter will jump at the *start* of the word (the label is case insensitive to go faster).
 
 ```
-this is a test
+This is a test
 |    |  |  |
 
 ```
@@ -67,10 +52,45 @@ this is a test
 
 To enable the highlight, set the settings `jumper_quick_scope` to true. Or, if you want to enable the feature only for the current line, set it to `"line"`.
 
-In comparison to "Quick Jump", there's no direction, it will try to cover as many word as possible and the label is not necessary the
-first letter of the word.
+You can also select until the matching word (that word included or not).
 
-You can also select until the matching word (that word included).
+Like for "Go To Anywhere", you can press "space" or "tab" before pressing the label to select (included or not) until the match.
+
+```json
+{
+    "keys": [
+        "find", "<character>",
+    ],
+    "command": "jumper_quick_scope"
+},
+{
+    "keys": [
+    "find", "tab",
+    ],
+    "command": "jumper_quick_scope",
+    "args": {"character": "\t"}
+},
+{
+    "keys": [
+        "shift+find", "<character>",
+    ],
+    "command": "jumper_quick_scope",
+    "args": {"extend": true}
+}
+```
+
+## Select Next Selection Match
+The command `select_next_same_selection` will select the next / previous text matching the current selection
+(you can also add it to the current selection, and it will be the same as `find_under_expand`).
+
+## Select Selector
+The command `jumper_select_selector` select the next / previous text matching the sublime selector.
+
+See:
+- https://www.sublimetext.com/docs/scope_naming.html
+- https://www.sublimetext.com/docs/selectors.html
+
+By default, the selector match the strings.
 
 # TODO
 - Remove `create_keybind.py` and add keybind in the readme once https://github.com/sublimehq/sublime_text/issues/6650 is fixed

@@ -1,6 +1,6 @@
 import re
 
-a = 1
+import sublime
 
 
 def get_next_element(html, index):
@@ -47,3 +47,43 @@ def get_element_html_positions(html, indexes):
 
 def get_element_html_position(html, index):
     return get_element_html_positions(html, [index])[index]
+
+
+class JumperLabel:
+    def __init__(self, region, character, label_region=None):
+        """Represent a label in the editor where we can jump to.
+
+        :param region: The region where we can jump / select
+        :param character: The character used to jump to the region
+        :param label_region: Where that character is displayed
+        """
+        self.region = region
+        self.character = character
+        self.label_region = label_region or region
+
+    def jump_to(self, view, cursor_region, extend, included):
+        """Jump to the target region.
+
+        :param view: View in which the jump will happen
+        :param cursor_region: The cursor region from which we will jump
+        :param extend: True if we should extend the selection
+        :param included: Used when `extend == True`, used so know if we should
+            include the target region in the selection or not
+        """
+        if not extend:
+            # Jump before the region
+            view.sel().add(sublime.Region(self.region.a, self.region.a))
+            return
+
+        cursor_a, cursor_b = sorted(cursor_region.to_tuple())
+
+        if self.region.a < cursor_a:
+            if included:
+                view.sel().add(sublime.Region(self.region.a, cursor_b))
+            else:
+                view.sel().add(sublime.Region(self.region.b, cursor_b))
+        else:
+            if included:
+                view.sel().add(sublime.Region(cursor_a, self.region.b))
+            else:
+                view.sel().add(sublime.Region(cursor_a, self.region.a))
