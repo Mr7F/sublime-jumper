@@ -79,9 +79,9 @@ class JumperLabel:
 
         if self.region.a < cursor_a:
             if included:
-                view.sel().add(sublime.Region(self.region.a, cursor_b))
+                view.sel().add(sublime.Region(cursor_b, self.region.a))
             else:
-                view.sel().add(sublime.Region(self.region.b, cursor_b))
+                view.sel().add(sublime.Region(cursor_b, self.region.b))
         else:
             if included:
                 view.sel().add(sublime.Region(cursor_a, self.region.b))
