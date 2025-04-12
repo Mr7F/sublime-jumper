@@ -61,22 +61,16 @@ Like for "Go To Anywhere", you can press "space" or "tab" before pressing the la
 
 ```json
 {
-    "keys": [
-        "find", "<character>",
-    ],
+    "keys": ["find", "<character>"],
     "command": "jumper_quick_scope"
 },
 {
-    "keys": [
-    "find", "tab",
-    ],
+    "keys": ["find", "tab"],
     "command": "jumper_quick_scope",
     "args": {"character": "\t"}
 },
 {
-    "keys": [
-        "shift+find", "<character>",
-    ],
+    "keys": ["shift+find", "<character>"],
     "command": "jumper_quick_scope",
     "args": {"extend": true}
 }
