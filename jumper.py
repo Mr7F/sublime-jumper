@@ -160,11 +160,13 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             self.view.window().focus_view(target_view)
 
             selection = list(target_view.sel())
-            target_view.sel().clear()
+            if not selection and not self.extend:
+                selection = [target_view.visible_region()]
 
+            target_view.sel().clear()
             for sel in selection:
                 self.positions[value][0].jump_to(
-                    self.view, sel, bool(self.extend), self.extend == 2
+                    target_view, sel, bool(self.extend), self.extend == 2
                 )
 
             target_view.show(target_view.sel()[0])
