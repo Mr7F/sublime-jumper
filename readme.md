@@ -53,6 +53,8 @@ This is a test
 - `<shortcut> i`: jump to *start* of "is"
 - `<shortcut> e`: jump to *start* of "test"
 
+For the other lines, it will show one character per line to jump at the start of that line.
+
 To enable the highlight, set the settings `jumper_quick_scope` to true. Or, if you want to enable the feature only for the current line, set it to `"line"`.
 
 You can also select until the matching word (that word included or not).

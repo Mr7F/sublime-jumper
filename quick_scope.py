@@ -1,4 +1,5 @@
 import re
+import string
 
 import sublime
 import sublime_plugin
@@ -101,18 +102,16 @@ def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
     target = view.settings().get("jumper_quick_scope")
 
     a, b = sorted(view.sel()[0].to_tuple())
-    visible_region = (
-        view.line(view.sel()[0]) if target == "line" else view.visible_region()
-    )
+    line_region = view.line(view.sel()[0])
 
     word_bounds = re.escape(get_word_separators(view))
 
     search_re = f"((?<=[{word_bounds}\\s\\n])[^{word_bounds}\\s\\n]+)|[{word_bounds}]"
-    result = view.find_all(search_re, within=visible_region)
+    result = view.find_all(search_re, within=line_region)
     if target == "line":
         # Do not make the label depending on the cursor if in line mode
         # Start with small word to show more label statistically
-        aa = (visible_region.a + visible_region.b) // 2
+        aa = (line_region.a + line_region.b) // 2
         result = sorted(result, key=lambda r: (abs(r.b - r.a), abs(r.a - aa)))
     else:
         result = sorted(result, key=lambda r: abs(r.a - a))
@@ -126,12 +125,35 @@ def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
         s = view.substr(r).lower()
 
         for i, c in enumerate(s):
-            if c not in regions:
+            if c.strip() and c not in regions:
                 break
         else:
             # Can not find a label
             # TODO: better algorithm
             continue
+
+        regions[c] = JumperLabel(r, c, sublime.Region(r.a + i, r.a + 1 + i))
+
+    if target == "line":
+        return regions
+
+    # Add label on rows
+    lines = view.find_all(r"[^\s].*", within=view.visible_region())
+    mid_region = (line_region.a + line_region.b) // 2
+    lines = sorted(lines, key=lambda l: (abs(mid_region - l.a), mid_region > l.a))
+    for r in lines:
+        # TODO: single quote and double quote should be the same
+        s = view.substr(r).lower()
+
+        for i, c in enumerate(s):
+            if c.strip() and c not in regions and c in string.ascii_letters:
+                break
+        else:
+            for i, c in enumerate(s):
+                if c.strip() and c not in regions and c not in string.ascii_letters:
+                    break
+            else:
+                continue
 
         regions[c] = JumperLabel(r, c, sublime.Region(r.a + i, r.a + 1 + i))
 
