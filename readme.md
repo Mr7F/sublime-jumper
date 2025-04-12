@@ -30,8 +30,9 @@ You can type
 The jump work when many files are open (but not the extend, because we can not edit 2 files at the same time).
 
 ## Technical
-Sublime text doesn't support "phantom on top of text", so the default implementation use HTML sheet, but you can change in the code if
-you prefer something else:
+Sublime text doesn't support "phantom on top of text", so the default implementation use HTML sheet.
+
+You can check the branch `master-all-labels-methods` to see all possible way to add labels
 - phantoms: the text will shift to the right
 - buffer: we will change the buffer, but the "redo" history can not be cleaned
 - popup: we show a popup, but you will see a shadow and you can not jump to the first line
