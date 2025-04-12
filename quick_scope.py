@@ -138,7 +138,7 @@ def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
         return regions
 
     # Add label on rows
-    lines = view.find_all(r"[^\s].*", within=view.visible_region())
+    lines = view.find_all(r"[^\s].*\n", within=view.visible_region())
     mid_region = (line_region.a + line_region.b) // 2
     lines = sorted(lines, key=lambda l: (abs(mid_region - l.a), mid_region > l.a))
     for r in lines:
