@@ -57,6 +57,11 @@ For the other lines, it will show one character per line to jump at the start of
 
 To enable the highlight, set the settings `jumper_quick_scope` to true. Or, if you want to enable the feature only for the current line, set it to `"line"`.
 
+```json
+{"jumper_quick_scope": true}
+{"jumper_quick_scope": "line"}
+```
+
 You can also select until the matching word (that word included or not).
 
 Like for "Go To Anywhere", you can press "space" or "tab" before pressing the label to select (included or not) until the match.
@@ -90,6 +95,28 @@ See:
 - https://www.sublimetext.com/docs/selectors.html
 
 By default, the selector match the strings.
+
+```json
+{
+    "keys": ["alt+ctrl+super+0"],
+    "command": "jumper_select_selector"
+},
+{
+    "keys": ["alt+ctrl+super+9"],
+    "command": "jumper_select_selector",
+    "args": {"direction": "previous"}
+},
+{
+    "keys": ["alt+ctrl+super+q"],
+    "command": "jumper_select_selector",
+    "args": {"selector": "entity.name"}
+},
+{
+    "keys": ["alt+ctrl+super+w"],
+    "command": "jumper_select_selector",
+    "args": {"direction": "previous", "selector": "entity.name"}
+}
+```
 
 # TODO
 - Remove `create_keybind.py` and add keybind in the readme once https://github.com/sublimehq/sublime_text/issues/6650 is fixed
