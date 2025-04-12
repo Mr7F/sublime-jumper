@@ -42,6 +42,8 @@ You can check the branch `master-all-labels-methods` to see all possible way to 
 Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope), each words get labelled by one letter inside of it,
 pressing a shortcut and then that letter will jump at the *start* of the word (the label is case insensitive to go faster).
 
+> https://youtu.be/5HcNKD383ek
+
 ```
 This is a test
 |    |  |  |
