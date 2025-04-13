@@ -128,6 +128,43 @@ By default, the selector match the strings.
     "command": "jumper_select_selector",
     "args": {"direction": "previous", "selector": "entity.name"}
 }
+// Select () {} [] content
+{
+    "keys": ["alt+ctrl+super+]"],
+    "command": "jumper_select_selector",
+    "args": {
+        "selector": "meta.sequence | meta.function.parameters | meta.set | meta.mapping | meta.function-call.arguments | meta.class.inheritance.python",
+        "trim": 1,
+    }
+},
+{
+    "keys": ["alt+ctrl+super+["],
+    "command": "jumper_select_selector",
+    "args": {
+    "direction": "previous",
+    "selector": "meta.sequence | meta.function.parameters | meta.set | meta.mapping | meta.function-call.arguments | meta.class.inheritance.python",
+    "trim": 1,
+}
+},
+{
+    "keys": ["shift+alt+ctrl+super+]"],
+    "command": "jumper_select_selector",
+    "args": {
+        "extend": true,
+        "selector": "meta.sequence | meta.function.parameters | meta.set | meta.mapping | meta.function-call.arguments | meta.class.inheritance.python",
+        "trim": 1,
+    }
+},
+{
+    "keys": ["shift+alt+ctrl+super+["],
+    "command": "jumper_select_selector",
+    "args": {
+        "selector": "meta.sequence | meta.function.parameters | meta.set | meta.mapping | meta.function-call.arguments | meta.class.inheritance.python",
+        "trim": 1,
+        "direction": "previous",
+        "extend": true
+    }
+},
 ```
 
 # TODO
@@ -135,3 +172,4 @@ By default, the selector match the strings.
 - Find a way to add letter as row number to jump faster
 - "Go To Anywhere", when clicking on a tab, the input panel should close
 - "Go To Anywhere", read `word_wrap` settings (set to "auto")
+- Improve `select_selector` once https://github.com/sublimehq/sublime_text/issues/6660 is fixed
