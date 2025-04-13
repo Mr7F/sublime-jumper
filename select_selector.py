@@ -3,7 +3,7 @@ import sublime_plugin
 
 from .utils import select_next_region
 
-_string_selector = "(meta.string - punctuation.definition.string.begin - punctuation.definition.string.end) | meta.interpolation"
+_string_selector = "((meta.string | string.quoted.double.json) - punctuation.definition.string.begin - punctuation.definition.string.end) | meta.interpolation"
 
 
 class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
