@@ -85,8 +85,9 @@ class SelectionShowQuickScopeWordListener(sublime_plugin.EventListener):
 
 
 def _quick_scope_show_labels(view, extend=0):
-    scope = "white" if not extend else "region.yellowish"
-    flags = 1024 | 32 | 256 if extend != 2 else sublime.DRAW_SOLID_UNDERLINE | 32 | 256
+    scope = ({1: "region.yellowish", 2: "region.bluish"}).get(int(extend), "white")
+
+    flags = 512 | 32 | 256 if extend != 2 else sublime.DRAW_SOLID_UNDERLINE | 32 | 256
     view.add_regions(
         "jumper_quick_scope",
         [r.label_region for r in _quick_scope_get_labels(view).values()],

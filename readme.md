@@ -90,6 +90,8 @@ The command `select_next_same_selection` will select the next / previous text ma
 ## Select Selector
 The command `jumper_select_selector` select the next / previous text matching the sublime selector.
 
+The idea is to have something similar than "select inside parenthesis" command of Vim.
+
 See:
 - https://www.sublimetext.com/docs/scope_naming.html
 - https://www.sublimetext.com/docs/selectors.html
