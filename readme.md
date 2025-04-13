@@ -167,6 +167,39 @@ By default, the selector match the strings.
         "extend": true
     }
 },
+// Jump to next / previous condition / loop
+{
+    "keys": ["alt+ctrl+super+i"],
+    "command": "jumper_select_selector",
+    "args": {
+        "selector": "keyword.control.conditional | keyword.control.loop - keyword.control.loop.for.in",
+    }
+},
+{
+    "keys": ["alt+ctrl+super+e"],
+    "command": "jumper_select_selector",
+    "args": {
+        "direction": "previous",
+        "selector": "keyword.control.conditional | keyword.control.loop - keyword.control.loop.for.in",
+    }
+},
+{
+"keys": ["shift+alt+ctrl+super+i"],
+    "command": "jumper_select_selector",
+    "args": {
+        "extend": true,
+        "selector": "keyword.control.conditional | keyword.control.loop - keyword.control.loop.for.in",
+    }
+},
+{
+"keys": ["shift+alt+ctrl+super+e"],
+    "command": "jumper_select_selector",
+    "args": {
+        "selector": "keyword.control.conditional | keyword.control.loop - keyword.control.loop.for.in",
+        "direction": "previous",
+        "extend": true
+    }
+},
 ```
 
 # TODO
