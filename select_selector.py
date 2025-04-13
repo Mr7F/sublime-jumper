@@ -11,7 +11,7 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
     > https://www.sublimetext.com/docs/selectors.html
     """
 
-    def run(self, edit, direction="next", selector=_string_selector):
+    def run(self, edit, direction="next", selector=_string_selector, extend=False):
         strings = self.view.find_by_selector(selector)
 
         if direction == "next":
@@ -29,7 +29,8 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
                 )
 
             if target:
-                self.view.sel().subtract(sel)
+                if not extend:
+                    self.view.sel().subtract(sel)
                 self.view.sel().add(target)
                 to_show = target
 

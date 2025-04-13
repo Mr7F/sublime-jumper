@@ -97,6 +97,7 @@ See:
 By default, the selector match the strings.
 
 ```json
+// Select strings
 {
     "keys": ["alt+ctrl+super+0"],
     "command": "jumper_select_selector"
@@ -106,6 +107,17 @@ By default, the selector match the strings.
     "command": "jumper_select_selector",
     "args": {"direction": "previous"}
 },
+{
+    "keys": ["shift+alt+ctrl+super+0"],
+    "command": "jumper_select_selector",
+    "args": {"extend": true}
+},
+{
+    "keys": ["shift+alt+ctrl+super+9"],
+    "command": "jumper_select_selector",
+    "args": {"direction": "previous", "extend": true}
+},
+// Select class / function
 {
     "keys": ["alt+ctrl+super+q"],
     "command": "jumper_select_selector",
