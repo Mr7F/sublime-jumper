@@ -165,7 +165,7 @@ By default, the selector match the strings.
 },
 ```
 
-# Select Next / Previous Bracket Content
+## Select Next / Previous Bracket Content
 Select the content of the next / previous `(){}[]` (using selector, to skip false positive).
 
 ![Bracket](demo_bracket.gif)
