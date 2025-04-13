@@ -95,9 +95,9 @@ def select_next_region(view, regions, direction="next", extend=False):
     The region can overlap (eg a nested json, etc).
     """
     if direction == "next":
-        regions = sorted(regions, key=lambda r: r.begin())
+        regions = sorted(regions, key=lambda r: max(r))
     else:
-        regions = sorted(regions, key=lambda r: r.end(), reverse=True)
+        regions = sorted(regions, key=lambda r: min(r), reverse=True)
 
     if extend:
         # Remove regions inside selection
@@ -110,9 +110,9 @@ def select_next_region(view, regions, direction="next", extend=False):
     to_show = None
     for sel in list(view.sel()):
         if direction == "next":
-            target = next((r for r in regions if min(sel) < min(r)), None)
+            target = next((r for r in regions if max(sel) < max(r)), None)
         else:
-            target = next((r for r in regions if max(sel) > max(r)), None)
+            target = next((r for r in regions if min(sel) > min(r)), None)
 
         if target is not None:
             if not extend:
@@ -122,10 +122,3 @@ def select_next_region(view, regions, direction="next", extend=False):
 
     if to_show is not None:
         view.show(to_show)
-
-    a = [2, 3]
-    a = {1, 3}
-    a = {1: 2}
-    a = [(1, 3), (2, 3), [((3, 3), (4, 2))]]
-
-    f"test {'aa' + bytes([1, 2]).decode()} bb"
