@@ -130,43 +130,6 @@ By default, the selector match the strings.
     "command": "jumper_select_selector",
     "args": {"direction": "previous", "selector": "entity.name"}
 }
-// Select () {} [] content
-{
-    "keys": ["alt+ctrl+super+]"],
-    "command": "jumper_select_selector",
-    "args": {
-        "selector": "meta.sequence | meta.function.parameters | meta.set | meta.mapping | meta.function-call.arguments | meta.class.inheritance.python",
-        "trim": 1,
-    }
-},
-{
-    "keys": ["alt+ctrl+super+["],
-    "command": "jumper_select_selector",
-    "args": {
-    "direction": "previous",
-    "selector": "meta.sequence | meta.function.parameters | meta.set | meta.mapping | meta.function-call.arguments | meta.class.inheritance.python",
-    "trim": 1,
-}
-},
-{
-    "keys": ["shift+alt+ctrl+super+]"],
-    "command": "jumper_select_selector",
-    "args": {
-        "extend": true,
-        "selector": "meta.sequence | meta.function.parameters | meta.set | meta.mapping | meta.function-call.arguments | meta.class.inheritance.python",
-        "trim": 1,
-    }
-},
-{
-    "keys": ["shift+alt+ctrl+super+["],
-    "command": "jumper_select_selector",
-    "args": {
-        "selector": "meta.sequence | meta.function.parameters | meta.set | meta.mapping | meta.function-call.arguments | meta.class.inheritance.python",
-        "trim": 1,
-        "direction": "previous",
-        "extend": true
-    }
-},
 // Jump to next / previous condition / loop
 {
     "keys": ["alt+ctrl+super+i"],
@@ -199,6 +162,33 @@ By default, the selector match the strings.
         "direction": "previous",
         "extend": true
     }
+},
+```
+
+# Select Next / Previous Bracket Content
+Select the content of the next / previous `(){}[]` (using selector, to skip false positive).
+
+![Bracket](demo_bracket.gif)
+
+```json
+{
+    "keys": ["alt+ctrl+super+]"],
+    "command": "jumper_select_next_bracket",
+},
+{
+    "keys": ["alt+ctrl+super+["],
+    "command": "jumper_select_next_bracket",
+    "args": {"direction": "previous"}
+},
+{
+    "keys": ["shift+alt+ctrl+super+]"],
+    "command": "jumper_select_next_bracket",
+    "args": {"extend": true}
+},
+{
+    "keys": ["shift+alt+ctrl+super+["],
+    "command": "jumper_select_next_bracket",
+    "args": {"direction": "previous", "extend": true}
 },
 ```
 

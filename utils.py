@@ -87,3 +87,45 @@ class JumperLabel:
                 view.sel().add(sublime.Region(cursor_a, self.region.b))
             else:
                 view.sel().add(sublime.Region(cursor_a, self.region.a))
+
+
+def select_next_region(view, regions, direction="next", extend=False):
+    """Given a list of region, select the next / previous one.
+
+    The region can overlap (eg a nested json, etc).
+    """
+    if direction == "next":
+        regions = sorted(regions, key=lambda r: r.begin())
+    else:
+        regions = sorted(regions, key=lambda r: r.end(), reverse=True)
+
+    if extend:
+        # Remove regions inside selection
+        regions = [
+            r
+            for r in regions
+            if all(max(r) > max(sel) or min(r) < min(sel) for sel in view.sel())
+        ]
+
+    to_show = None
+    for sel in list(view.sel()):
+        if direction == "next":
+            target = next((r for r in regions if min(sel) < min(r)), None)
+        else:
+            target = next((r for r in regions if max(sel) > max(r)), None)
+
+        if target is not None:
+            if not extend:
+                view.sel().subtract(sel)
+            view.sel().add(target)
+            to_show = target
+
+    if to_show is not None:
+        view.show(to_show)
+
+    a = [2, 3]
+    a = {1, 3}
+    a = {1: 2}
+    a = [(1, 3), (2, 3), [((3, 3), (4, 2))]]
+
+    f"test {'aa' + bytes([1, 2]).decode()} bb"
