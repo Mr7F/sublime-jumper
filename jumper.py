@@ -191,7 +191,10 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             target_view.sel().clear()
             for sel in selection:
                 self.positions[value][0].jump_to(
-                    target_view, sel, bool(self.extend), self.extend == 2
+                    target_view,
+                    sel,
+                    bool(self.extend),
+                    self.extend == 2,
                 )
 
             target_view.show(target_view.sel()[0])
