@@ -33,9 +33,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 
         self.extend = int(extend)
         self.is_regex = is_regex
-        self.word_mode = self.view.settings().get(
-            "jumper_go_to_anywhere_word_mode"
-        )
+        self.word_mode = self.view.settings().get("jumper_go_to_anywhere_word_mode")
 
         views = {v: v.visible_region() for v in self._active_views if v is not None}
         active_view[self.view.window()] = self.view.window().active_view()
@@ -246,7 +244,9 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 continue
 
             color = (
-                ({1: style["yellowish"], 2: style["bluish"]}).get(int(extend), style["pinkish"])
+                ({1: style["yellowish"], 2: style["bluish"]}).get(
+                    int(extend), style["pinkish"]
+                )
                 if c.startswith(search)
                 else style["caret"]
             )

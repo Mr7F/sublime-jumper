@@ -222,7 +222,6 @@ Select the content of the next / previous `(){}[]` (using selector, to skip fals
 - Find a way to add letter as row number to jump faster
 - "Go To Anywhere", when clicking on a tab, the input panel should close
 - "Go To Anywhere", read `word_wrap` settings (set to "auto")
-- "Go To Anywhere", word mode, select word and not character
 - Improve `select_selector` once https://github.com/sublimehq/sublime_text/issues/6660 is fixed
 - Skip current selection (like ctrl+k, ctrl+d)
 - Flash mode: https://github.com/folke/flash.nvim

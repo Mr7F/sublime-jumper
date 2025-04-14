@@ -28,6 +28,9 @@ class JumperQuickScopeCommand(sublime_plugin.TextCommand):
 
         character = character.lower()
 
+        if character in "'`\"":
+            character = "'"
+
         if character in self.regions:
             selection = self.view.sel()[0]
             self.view.sel().clear()
@@ -120,6 +123,8 @@ def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
         s = view.substr(r).lower()
 
         for i, c in enumerate(s):
+            if c in "'`\"":
+                c = "'"
             if c.strip() and c not in regions:
                 break
         else:
@@ -137,7 +142,6 @@ def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
     mid_region = (line_region.a + line_region.b) // 2
     lines = sorted(lines, key=lambda l: (abs(mid_region - l.a), mid_region > l.a))
     for r in lines:
-        # TODO: single quote and double quote should be the same
         s = view.substr(r).lower()
 
         for i, c in enumerate(s):
@@ -145,6 +149,8 @@ def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
                 break
         else:
             for i, c in enumerate(s):
+                if c in "'`\"":
+                    c = "'"
                 if c.strip() and c not in regions and c not in string.ascii_letters:
                     break
             else:
