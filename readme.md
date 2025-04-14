@@ -52,6 +52,18 @@ With `jumper_go_to_anywhere_word_mode`, you can only search at the beginning of 
 
 Searching for quotes ``` `'" ``` will matches any quotes (same for labels).
 
+You can be creative, it supports regex, for example, this is the same as the `HopWord` command from (hop.nvim)[https://github.com/smoka7/hop.nvim]
+```json
+{
+    "keys": ["find"],
+    "command": "jumper_go_to_anywhere",
+    "args": {
+        "is_regex": true,
+        "character": "(?<=\\W)\\w"
+    },
+},
+```
+
 ## Technical
 Sublime text doesn't support "phantom on top of text", so the default implementation use HTML sheet.
 
