@@ -4,13 +4,7 @@ import string
 import sublime
 import sublime_plugin
 
-from .utils import JumperLabel
-
-
-def get_word_separators(view):
-    word_separators = view.settings().get("word_separators")
-    return word_separators or "./\\()\"'-:,.;<>~!@#$%^&*|+=[]{}`~?"
-
+from .utils import JumperLabel, get_word_separators
 
 _input_panel_opened = {}
 

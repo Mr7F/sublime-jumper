@@ -16,6 +16,23 @@ If the charset is not big enough, you can press many keys to jump where you want
 
 [![Demo](https://img.youtube.com/vi/AVkC4VIXuBY/maxresdefault.jpg)](https://www.youtube.com/watch?v=AVkC4VIXuBY)
 
+```json
+{
+    "keys": ["find", "enter", "<character>"],
+    "command": "jumper_go_to_anywhere",
+},
+{   // Jump to end of non-empty line
+    "keys": ["find", "enter", "tab"],
+    "command": "jumper_go_to_anywhere",
+    "args": {"character": "\t"},
+},
+{   // Jump to start of non-empty line
+    "keys": ["find", "enter", "space"],
+    "command": "jumper_go_to_anywhere",
+    "args": {"character": " "},
+},
+````
+
 Settings
 ```json
 {
@@ -28,6 +45,12 @@ You can type
 - tab to jump at the end of non-empty line
 
 The jump work when many files are open (but not the extend, because we can not edit 2 files at the same time).
+
+With `jumper_go_to_anywhere_case_insensitive`, you can make the search case insensitive, and the labels will also be lower case.
+
+With `jumper_go_to_anywhere_word_mode`, you can only search at the beginning of the words (reducing the number of labels) and the selection will select the word and not the character.
+
+Searching for quotes ``` `'" ``` will matches any quotes (same for labels).
 
 ## Technical
 Sublime text doesn't support "phantom on top of text", so the default implementation use HTML sheet.
@@ -82,6 +105,8 @@ Like for "Go To Anywhere", you can press "space" or "tab" before pressing the la
     "args": {"extend": true}
 }
 ```
+
+A cool keybind is to use a shortcut for "Quick Scope", and that "shortcut, enter" for "Go To Anywhere" (since "enter" is not a valid quick scope search argument).
 
 ## Select Next Selection Match
 The command `select_next_same_selection` will select the next / previous text matching the current selection
@@ -197,5 +222,7 @@ Select the content of the next / previous `(){}[]` (using selector, to skip fals
 - Find a way to add letter as row number to jump faster
 - "Go To Anywhere", when clicking on a tab, the input panel should close
 - "Go To Anywhere", read `word_wrap` settings (set to "auto")
+- "Go To Anywhere", word mode, select word and not character
 - Improve `select_selector` once https://github.com/sublimehq/sublime_text/issues/6660 is fixed
 - Skip current selection (like ctrl+k, ctrl+d)
+- Flash mode: https://github.com/folke/flash.nvim

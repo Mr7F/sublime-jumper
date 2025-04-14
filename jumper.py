@@ -1,11 +1,16 @@
 import html
+import re
 import string
 from collections import defaultdict
 
 import sublime
 import sublime_plugin
 
-from .utils import JumperLabel, get_element_html_positions
+from .utils import (
+    JumperLabel,
+    get_element_html_positions,
+    get_word_separators,
+)
 
 sheets_per_view = {}
 active_view = {}
@@ -28,6 +33,9 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 
         self.extend = int(extend)
         self.is_regex = is_regex
+        self.word_mode = self.view.settings().get(
+            "jumper_go_to_anywhere_word_mode"
+        )
 
         views = {v: v.visible_region() for v in self._active_views if v is not None}
         active_view[self.view.window()] = self.view.window().active_view()
@@ -39,13 +47,25 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
         self.char = character
 
         self.edit = edit
-        self.charset = list(
+        self.charset = (
             self.view.settings().get("jumper_go_to_anywhere_charset") or self.CHARSET
         )
+        self.case_insensitive = self.view.settings().get(
+            "jumper_go_to_anywhere_case_insensitive"
+        )
 
-        # Show many jump characters if needed
+        if self.case_insensitive:
+            self.charset = self.charset.lower()
+
+        # Remove redundant characters (and `.` is used when we need morel labels)
+        cleaned_charset = ""
+        for c in self.charset:
+            if c not in cleaned_charset and c != ".":
+                cleaned_charset += c
+        self.charset = list(cleaned_charset)
+
+        # Show many jumps characters if needed
         self.jump_next_c = "."
-        self.charset = [c for c in self.charset if c != "."]
         base_charset = self.charset.copy()
         for i in range(1, 5):
             self.charset.extend([i * self.jump_next_c + c for c in base_charset])
@@ -80,10 +100,17 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             # Find any quotes types
             matches = view.find_all(r"['\"`]")
         else:
-            if self.is_regex:
-                matches = view.find_all(char, within=visible_region)
-            else:
-                matches = view.find_all(char, sublime.LITERAL, within=visible_region)
+            flags = 0
+            if self.case_insensitive:
+                flags |= sublime.IGNORECASE
+            if not self.is_regex:
+                char = re.escape(char)
+            if self.word_mode:
+                seps = get_word_separators(view) + " "
+                if not char.startswith(tuple(seps)):
+                    char = f"(?<=[{re.escape(seps)}]){char}[^{re.escape(seps)}]*"
+
+            matches = view.find_all(char, flags, within=visible_region)
 
         matches = sorted(matches, key=lambda x: abs(x.begin() - start_cursor))
         matches = matches[: len(charset)]
@@ -219,7 +246,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 continue
 
             color = (
-                (style["pinkish"] if not self.extend else style["yellowish"])
+                ({1: style["yellowish"], 2: style["bluish"]}).get(int(extend), style["pinkish"])
                 if c.startswith(search)
                 else style["caret"]
             )
@@ -227,8 +254,8 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
             add_style = {"background-color": style["inactive_selection"]}
             if self.extend == 2:
                 add_style = {
-                    "background-color": style["selection"],
-                    "border": f"1px solid {style['yellowish']}",
+                    # "background-color": style["selection"],
+                    "border": f"1px solid {color}",
                     "padding": "-1px",
                 }
 

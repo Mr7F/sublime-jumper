@@ -122,3 +122,8 @@ def select_next_region(view, regions, direction="next", extend=False):
 
     if to_show is not None:
         view.show(to_show)
+
+
+def get_word_separators(view):
+    word_separators = view.settings().get("word_separators")
+    return word_separators or "./\\()\"'-:,.;<>~!@#$%^&*|+=[]{}`~?"
