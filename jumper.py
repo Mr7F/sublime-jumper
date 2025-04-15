@@ -55,15 +55,16 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
         if self.case_insensitive:
             self.charset = self.charset.lower()
 
+        self.jump_next_c = "."
+
         # Remove redundant characters (and `.` is used when we need morel labels)
         cleaned_charset = ""
         for c in self.charset:
-            if c not in cleaned_charset and c != ".":
+            if c not in cleaned_charset and c != self.jump_next_c:
                 cleaned_charset += c
         self.charset = list(cleaned_charset)
 
         # Show many jumps characters if needed
-        self.jump_next_c = "."
         base_charset = self.charset.copy()
         for i in range(1, 5):
             self.charset.extend([i * self.jump_next_c + c for c in base_charset])

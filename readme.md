@@ -21,6 +21,11 @@ If the charset is not big enough, you can press many keys to jump where you want
     "keys": ["find", "enter", "<character>"],
     "command": "jumper_go_to_anywhere",
 },
+{
+    // Needed if we need to press shift for the target
+    "keys": ["find", "enter", "shift", "<character>"],
+    "command": "jumper_go_to_anywhere",
+},
 {   // Jump to end of non-empty line
     "keys": ["find", "enter", "tab"],
     "command": "jumper_go_to_anywhere",
