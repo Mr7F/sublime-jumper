@@ -14,7 +14,7 @@ Example:
 
 If the charset is not big enough, you can press many keys to jump where you want.
 
-[![Demo](https://img.youtube.com/vi/AVkC4VIXuBY/maxresdefault.jpg)](https://www.youtube.com/watch?v=AVkC4VIXuBY)
+[![Demo](img/demo_go_to_anywhere.gif)](https://www.youtube.com/watch?v=AVkC4VIXuBY)
 
 ```json
 {
@@ -71,7 +71,7 @@ You can be creative, it supports regex, for example, this is the same as the `Ho
 
 When the label has more than one character (because a lot of text matched), you will see border around the label. The number of border is the number of time you need to press `.` before pressing the label to jump there. While you press `.`, the borders will be removed to show the remaining number of key press. If you don't like that, you can disable it with `jumper_go_to_anywhere_no_borders_label`.
 
-![Border](demo_borders.png)
+![Border](img/demo_borders.gif)
 
 ## Technical
 Sublime text doesn't support "phantom on top of text", so the default implementation use HTML sheet.
@@ -86,7 +86,7 @@ You can check the branch `master-all-labels-methods` to see all possible way to 
 Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope), each words get labelled by one letter inside of it,
 pressing a shortcut and then that letter will jump at the *start* of the word (the label is case insensitive to go faster).
 
-> https://youtu.be/5HcNKD383ek
+![Quick Scope](img/demo_quick_scope_word_mode.gif)
 
 ```
 This is a test
@@ -214,7 +214,7 @@ By default, the selector match the strings.
 ## Select Next / Previous Bracket Content
 Select the content of the next / previous `(){}[]` (using selector, to skip false positive).
 
-![Bracket](demo_bracket.gif)
+![Bracket](img/demo_bracket.gif)
 
 ```json
 {
