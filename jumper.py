@@ -259,15 +259,37 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
             if self.extend == 2:
                 add_style = {
                     # "background-color": style["selection"],
-                    "border": f"1px solid {color}",
+                    # "border": f"1px solid {color}",
                     "padding": "-1px",
                 }
 
-            label = c[len(search) : len(search) + 1] or c[-1]
             start, size = html_position
 
             if "<br" in text[start : start + size]:
                 size = 0  # Jump to end of line
+
+            if self.view.settings().get("jumper_go_to_anywhere_no_borders_label"):
+                label = c[len(search) : len(search) + 1] or c[-1]
+
+            else:
+                # Show border to specify the number of time we need to press the "multi-label" character
+                label = c[-1]
+                borders = next(
+                    (i for i, (a, b) in enumerate(zip(search, c)) if a != b),
+                    len(c) - len(search),
+                )
+                borders -= 1
+
+                if borders >= 1:
+                    add_style["border-bottom"] = f"1px solid {color}"
+                if borders >= 2:
+                    add_style["padding-right"] = "-1px"
+                    add_style["border-right"] = f"1px solid {color}"
+                if borders >= 3:
+                    add_style["border-top"] = f"1px solid {color}"
+                if borders >= 4:
+                    add_style["padding-left"] = "-1px"
+                    add_style["border-left"] = f"1px solid {color}"
 
             text = (
                 text[:start]
@@ -279,7 +301,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                         "color": color,
                         "font-style": "normal",
                         "font-weight": "bold",
-                        "border-radius": "5px",
+                        "border-radius": "2px",
                         **add_style,
                     },
                 )

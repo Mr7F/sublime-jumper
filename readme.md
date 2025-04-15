@@ -57,7 +57,7 @@ With `jumper_go_to_anywhere_word_mode`, you can only search at the beginning of 
 
 Searching for quotes ``` `'" ``` will matches any quotes (same for labels).
 
-You can be creative, it supports regex, for example, this is the same as the `HopWord` command from (hop.nvim)[https://github.com/smoka7/hop.nvim]
+You can be creative, it supports regex, for example, this is the same as the `HopWord` command from [hop.nvim](https://github.com/smoka7/hop.nvim)
 ```json
 {
     "keys": ["find"],
@@ -68,6 +68,10 @@ You can be creative, it supports regex, for example, this is the same as the `Ho
     },
 },
 ```
+
+When the label has more than one character (because a lot of text matched), you will see border around the label. The number of border is the number of time you need to press `.` before pressing the label to jump there. While you press `.`, the borders will be removed to show the remaining number of key press. If you don't like that, you can disable it with `jumper_go_to_anywhere_no_borders_label`.
+
+![Border](demo_borders.png)
 
 ## Technical
 Sublime text doesn't support "phantom on top of text", so the default implementation use HTML sheet.
