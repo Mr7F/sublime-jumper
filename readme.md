@@ -240,7 +240,7 @@ Select the content of the next / previous `(){}[]` (using selector, to skip fals
 
 # TODO
 - Remove `create_keybind.py` and add keybind in the readme once https://github.com/sublimehq/sublime_text/issues/6650 is fixed
-- Find a way to add letter as row number to jump faster
+- Find a way to add letter as row number to jump faster, once https://github.com/sublimehq/sublime_text/issues/6654 is done
 - "Go To Anywhere", when clicking on a tab, the input panel should close
 - "Go To Anywhere", read `word_wrap` settings (set to "auto")
 - Improve `select_selector` once https://github.com/sublimehq/sublime_text/issues/6660 is fixed
