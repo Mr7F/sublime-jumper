@@ -165,17 +165,6 @@ By default, the selector match the strings.
     "command": "jumper_select_selector",
     "args": {"direction": "previous", "extend": true}
 },
-// Select class / function
-{
-    "keys": ["alt+ctrl+super+q"],
-    "command": "jumper_select_selector",
-    "args": {"selector": "entity.name"}
-},
-{
-    "keys": ["alt+ctrl+super+w"],
-    "command": "jumper_select_selector",
-    "args": {"direction": "previous", "selector": "entity.name"}
-}
 // Jump to next / previous condition / loop
 {
     "keys": ["alt+ctrl+super+i"],
