@@ -10,7 +10,7 @@ _input_panel_opened = {}
 
 
 class JumperQuickScopeCommand(sublime_plugin.TextCommand):
-    """Go to the the word labelled by a character."""
+    """Go to the word labelled by a character."""
 
     def run(self, edit, character, extend=False, included=True):
         self.regions = _quick_scope_get_labels(self.view)

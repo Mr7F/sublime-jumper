@@ -281,6 +281,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 borders -= 1
 
                 if borders >= 1:
+                    add_style["background-color"] = ""
                     add_style["border-bottom"] = f"1px solid {color}"
                 if borders >= 2:
                     add_style["padding-right"] = "-1px"
