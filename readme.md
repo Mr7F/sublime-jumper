@@ -14,7 +14,9 @@ Example:
 
 If the charset is not big enough, you can press many keys to jump where you want.
 
-[![Demo](img/demo_go_to_anywhere.gif)](https://www.youtube.com/watch?v=AVkC4VIXuBY)
+<p align="center">
+  <img src="img/demo_go_to_anywhere.gif">
+</p>
 
 ```json
 {
@@ -86,7 +88,10 @@ You can check the branch `master-all-labels-methods` to see all possible way to 
 Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope), each words get labelled by one letter inside of it,
 pressing a shortcut and then that letter will jump at the *start* of the word (the label is case insensitive to go faster).
 
-![Quick Scope](img/demo_quick_scope_word_mode.gif)
+<p align="center">
+  <img src="img/demo_quick_scope_word_mode.gif">
+</p>
+
 
 ```
 This is a test
@@ -203,7 +208,10 @@ By default, the selector match the strings.
 ## Select Next / Previous Bracket Content
 Select the content of the next / previous `(){}[]` (using selector, to skip false positive).
 
-![Bracket](img/demo_bracket.gif)
+<p align="center">
+  <img src="img/demo_bracket.gif">
+</p>
+
 
 ```json
 {
