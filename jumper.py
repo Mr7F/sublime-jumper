@@ -256,12 +256,6 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
             )
 
             add_style = {"background-color": style["inactive_selection"]}
-            if self.extend == 2:
-                add_style = {
-                    # "background-color": style["selection"],
-                    # "border": f"1px solid {color}",
-                    "padding": "-1px",
-                }
 
             start, size = html_position
 
