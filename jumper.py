@@ -255,7 +255,10 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 else style["caret"]
             )
 
-            add_style = {"background-color": style["inactive_selection"]}
+            add_style = {
+                "background-color": style["inactive_selection"],
+                "border-radius": "5px",
+            }
 
             start, size = html_position
 
@@ -276,6 +279,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
 
                 if borders >= 1:
                     add_style["background-color"] = ""
+                    add_style["border-radius"] = "0px"
                     add_style["border-bottom"] = f"1px solid {color}"
                 if borders >= 2:
                     add_style["padding-right"] = "-1px"
@@ -296,7 +300,6 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                         "color": color,
                         "font-style": "normal",
                         "font-weight": "bold",
-                        "border-radius": "2px",
                         **add_style,
                     },
                 )
