@@ -105,7 +105,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             if not self.is_regex:
                 char = re.escape(char)
             if self.word_mode:
-                seps = get_word_separators(view) + " "
+                seps = get_word_separators(view) + " \n"
                 if not char.startswith(tuple(seps)):
                     char = f"(?<=[{re.escape(seps)}]){char}[^{re.escape(seps)}]*"
 
