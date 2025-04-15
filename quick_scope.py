@@ -104,7 +104,7 @@ def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
 
     word_bounds = re.escape(get_word_separators(view))
 
-    search_re = f"((?<=[{word_bounds}\\s\\n])[^{word_bounds}\\s\\n]+)|[{word_bounds}]"
+    search_re = f"^[^{word_bounds}\\s\\n]+|(?<=[{word_bounds}\\s\\n])[^{word_bounds}\\s\\n]+|[{word_bounds}]"
     result = view.find_all(search_re, within=line_region)
     if target == "line":
         # Do not make the label depending on the cursor if in line mode
@@ -116,9 +116,6 @@ def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
 
     regions = {}
     for r in result:
-        if view.sel()[0] == r:
-            # Do not highlight the current cursor position
-            continue
         # TODO: single quote and double quote should be the same
         s = view.substr(r).lower()
 
@@ -132,6 +129,11 @@ def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
             # TODO: better algorithm
             continue
 
+        if min(view.sel()[0]) == min(r):
+            # Do not highlight the current cursor position
+            # And try to use the caracter for a missong region if possible
+            regions[c] = JumperLabel(r, c, sublime.Region(r.a, r.a))
+            continue
         regions[c] = JumperLabel(r, c, sublime.Region(r.a + i, r.a + 1 + i))
 
     if target == "line":

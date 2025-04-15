@@ -16,7 +16,6 @@ sheets_per_view = {}
 active_view = {}
 views = {}
 
-
 class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
     """Highlight all the characters visible on the screen, with a letter for each, press that letter to jump to the position.
 

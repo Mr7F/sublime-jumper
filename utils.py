@@ -59,7 +59,7 @@ class JumperLabel:
         """
         self.region = region
         self.character = character
-        self.label_region = label_region or region
+        self.label_region = region if label_region is None else label_region
 
     def jump_to(self, view, cursor_region, extend, included):
         """Jump to the target region.
