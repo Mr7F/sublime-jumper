@@ -123,6 +123,13 @@ def select_next_region(view, regions, direction="next", extend=False):
     if to_show is not None:
         view.show(to_show)
 
+
 def get_word_separators(view):
     word_separators = view.settings().get("word_separators")
     return word_separators or "./\\()\"'-:,.;<>~!@#$%^&*|+=[]{}`~?"
+
+
+def setting(name, view, default=None):
+    # Load settings from the user preferences first, and then from the Jumper settings
+    default = sublime.load_settings("Jumper.sublime-settings").get(name, default)
+    return view.settings().get(name, default)

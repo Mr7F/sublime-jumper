@@ -53,7 +53,7 @@ You can type
 
 The jump work when many files are open (but not the extend, because we can not edit 2 files at the same time).
 
-With `jumper_go_to_anywhere_case_insensitive`, you can make the search case insensitive, and the labels will also be lower case.
+With `jumper_go_to_anywhere_case_sensitive`, you can make the search case insensitive, and the labels will also be lower case.
 
 With `jumper_go_to_anywhere_word_mode`, you can only search at the beginning of the words (reducing the number of labels) and the selection will select the word and not the character.
 
@@ -154,27 +154,27 @@ By default, the selector match the strings.
 ```json
 // Select strings
 {
-    "keys": ["alt+ctrl+super+0"],
+    "keys": ["alt+ctrl+super+'"],
     "command": "jumper_select_selector"
 },
 {
-    "keys": ["alt+ctrl+super+9"],
+    "keys": ["alt+ctrl+super+`"],
     "command": "jumper_select_selector",
     "args": {"direction": "previous"}
 },
 {
-    "keys": ["shift+alt+ctrl+super+0"],
+    "keys": ["shift+alt+ctrl+super+'"],
     "command": "jumper_select_selector",
     "args": {"extend": true}
 },
 {
-    "keys": ["shift+alt+ctrl+super+9"],
+    "keys": ["shift+alt+ctrl+super+`"],
     "command": "jumper_select_selector",
     "args": {"direction": "previous", "extend": true}
 },
 // Select class / function
 {
-    "keys": ["alt+ctrl+super+q"],
+    "keys": ["alt+ctrl+super+f"],
     "command": "jumper_select_selector",
     "args": {"selector": "entity.name"}
 },

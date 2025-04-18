@@ -4,7 +4,7 @@ import string
 import sublime
 import sublime_plugin
 
-from .utils import JumperLabel, get_word_separators
+from .utils import JumperLabel, get_word_separators, setting
 
 _input_panel_opened = {}
 
@@ -77,7 +77,7 @@ class SelectionShowQuickScopeWordListener(sublime_plugin.EventListener):
             view.window().run_command("hide_panel", {"cancel": True})
             del _input_panel_opened[self.view.id()]
 
-        if view.settings().get("jumper_quick_scope"):
+        if setting("jumper_quick_scope", view):
             _quick_scope_show_labels(view)
 
 
@@ -97,7 +97,7 @@ def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
     if len(view.sel()) != 1:
         return {}
 
-    target = view.settings().get("jumper_quick_scope")
+    target = setting("jumper_quick_scope", view)
 
     a, b = sorted(view.sel()[0].to_tuple())
     line_region = view.line(view.sel()[0])

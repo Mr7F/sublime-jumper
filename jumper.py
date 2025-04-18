@@ -10,11 +10,13 @@ from .utils import (
     JumperLabel,
     get_element_html_positions,
     get_word_separators,
+    setting,
 )
 
 sheets_per_view = {}
 active_view = {}
 views = {}
+
 
 class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
     """Highlight all the characters visible on the screen, with a letter for each, press that letter to jump to the position.
@@ -25,14 +27,12 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
     > https://github.com/jfcherng-sublime/ST-AceJump-Chinese
     """
 
-    CHARSET = string.ascii_letters + string.digits + "@%${}&!#[]':-\"/|;^_="
-
     def run(self, edit, character, extend=False, is_regex=False):
         global views, sheets_per_view, active_view
 
         self.extend = int(extend)
         self.is_regex = is_regex
-        self.word_mode = self.view.settings().get("jumper_go_to_anywhere_word_mode")
+        self.word_mode = setting("jumper_go_to_anywhere_word_mode", self.view)
 
         views = {v: v.visible_region() for v in self._active_views if v is not None}
         active_view[self.view.window()] = self.view.window().active_view()
@@ -44,14 +44,10 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
         self.char = character
 
         self.edit = edit
-        self.charset = (
-            self.view.settings().get("jumper_go_to_anywhere_charset") or self.CHARSET
-        )
-        self.case_insensitive = self.view.settings().get(
-            "jumper_go_to_anywhere_case_insensitive"
-        )
+        self.charset = setting("jumper_go_to_anywhere_charset", self.view)
+        self.case_sensitive = setting("jumper_go_to_anywhere_case_sensitive", self.view)
 
-        if self.case_insensitive:
+        if not self.case_sensitive:
             self.charset = self.charset.lower()
 
         self.jump_next_c = "."
@@ -99,7 +95,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             matches = view.find_all(r"['\"`]")
         else:
             flags = 0
-            if self.case_insensitive:
+            if not self.case_sensitive:
                 flags |= sublime.IGNORECASE
             if not self.is_regex:
                 char = re.escape(char)
@@ -264,7 +260,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
             if "<br" in text[start : start + size]:
                 size = 0  # Jump to end of line
 
-            if self.view.settings().get("jumper_go_to_anywhere_no_borders_label"):
+            if setting("jumper_go_to_anywhere_no_borders_label", self.view):
                 label = c[len(search) : len(search) + 1] or c[-1]
 
             else:

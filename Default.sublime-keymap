@@ -1,0 +1,307 @@
+[
+    // Quick Scope
+    {
+        "keys": [
+            "find",
+            "<character>",
+        ],
+        "command": "jumper_quick_scope"
+    },
+    {
+        "keys": [
+            "find",
+            "shift", // Needed when we press "shift" for a character
+            "<character>",
+        ],
+        "command": "jumper_quick_scope"
+    },
+    {
+        "keys": [
+            "find",
+            "tab",
+        ],
+        "command": "jumper_quick_scope",
+        "args": {
+            "character": "\t"
+        }
+    },
+    {
+        "keys": [
+            "find",
+            "shift", // Needed when we press "shift" for a character
+            "tab",
+        ],
+        "command": "jumper_quick_scope",
+        "args": {
+            "character": "\t"
+        }
+    },
+    {
+        "keys": [
+            "shift+find",
+            "<character>",
+        ],
+        "command": "jumper_quick_scope",
+        "args": {
+            "extend": true
+        }
+    },
+    {
+        "keys": [
+            "shift+find",
+            "shift", // Needed when we press "shift" for a character
+            "<character>",
+        ],
+        "command": "jumper_quick_scope",
+        "args": {
+            "extend": true
+        }
+    },
+    // Go To Anywhere
+    {
+        "keys": [
+            "find",
+            "enter",
+            "<character>"
+        ],
+        "command": "jumper_go_to_anywhere",
+    },
+    {
+        "keys": [
+            "find",
+            "enter",
+            "shift", // Needed when we press "shift" for a character
+            "<character>"
+        ],
+        "command": "jumper_go_to_anywhere",
+    },
+    {
+        "keys": [
+            "find",
+            "enter",
+            "tab"
+        ],
+        "command": "jumper_go_to_anywhere",
+        "args": {
+            "character": "\t"
+        },
+    },
+    {
+        "keys": [
+            "find",
+            "enter",
+            "space"
+        ],
+        "command": "jumper_go_to_anywhere",
+        "args": {
+            "character": " "
+        },
+    },
+    // Same Selection
+    {
+        "keys": [
+            "alt+ctrl+super+\\"
+        ],
+        "command": "select_next_same_selection",
+        "args": {
+            "direction": "previous"
+        },
+    },
+    {
+        "keys": [
+            "alt+ctrl+super+/"
+        ],
+        "command": "select_next_same_selection",
+    },
+    {
+        "keys": [
+            "alt+ctrl+shift+super+\\"
+        ],
+        "command": "select_next_same_selection",
+        "args": {
+            "direction": "previous",
+            "keep_selection": true
+        },
+    },
+    {
+        "keys": [
+            "alt+ctrl+shift+super+/"
+        ],
+        "command": "select_next_same_selection",
+        "args": {
+            "keep_selection": true
+        },
+    },
+    // Select Next / Previous: String
+    {
+        "keys": [
+            "alt+ctrl+super+'"
+        ],
+        "command": "jumper_select_selector"
+    },
+    {
+        "keys": [
+            "alt+ctrl+super+`"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "direction": "previous"
+        }
+    },
+    {
+        "keys": [
+            "shift+alt+ctrl+super+'"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "extend": true
+        }
+    },
+    {
+        "keys": [
+            "shift+alt+ctrl+super+`"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "direction": "previous",
+            "extend": true
+        }
+    },
+    // Select Next / Previous: If / Else / Loop / Try / Except
+    {
+        "keys": [
+            "alt+ctrl+super+i"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "selector": "keyword.control.conditional | keyword.control.exception | keyword.control.loop - keyword.control.loop.for.in",
+        }
+    },
+    {
+        "keys": [
+            "alt+ctrl+super+e"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "direction": "previous",
+            "selector": "keyword.control.conditional | keyword.control.exception | keyword.control.loop - keyword.control.loop.for.in",
+        }
+    },
+    {
+        "keys": [
+            "shift+alt+ctrl+super+i"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "extend": true,
+            "selector": "keyword.control.conditional | keyword.control.exception | keyword.control.loop - keyword.control.loop.for.in",
+        }
+    },
+    {
+        "keys": [
+            "shift+alt+ctrl+super+e"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "selector": "keyword.control.conditional | keyword.control.exception | keyword.control.loop - keyword.control.loop.for.in",
+            "direction": "previous",
+            "extend": true
+        }
+    },
+    // Select Next / Previous: Bracket Content
+    {
+        "keys": [
+            "alt+ctrl+super+]"
+        ],
+        "command": "jumper_select_next_bracket",
+    },
+    {
+        "keys": [
+            "alt+ctrl+super+["
+        ],
+        "command": "jumper_select_next_bracket",
+        "args": {
+            "direction": "previous",
+        }
+    },
+    {
+        "keys": [
+            "shift+alt+ctrl+super+]"
+        ],
+        "command": "jumper_select_next_bracket",
+        "args": {
+            "extend": true,
+        }
+    },
+    {
+        "keys": [
+            "shift+alt+ctrl+super+["
+        ],
+        "command": "jumper_select_next_bracket",
+        "args": {
+            "direction": "previous",
+            "extend": true
+        }
+    },
+    //  Select Next / Previous: Constant (int, bool, null, None, etc)
+    {
+        "keys": [
+            "alt+ctrl+super+k"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "selector": "constant.language | constant.numeric",
+        }
+    },
+    {
+        "keys": [
+            "alt+ctrl+super+c"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "direction": "previous",
+            "selector": "constant.language | constant.numeric",
+        }
+    },
+    {
+        "keys": [
+            "shift+alt+ctrl+super+k"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "extend": true,
+            "selector": "constant.language | constant.numeric",
+        }
+    },
+    {
+        "keys": [
+            "shift+alt+ctrl+super+c"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "selector": "constant.language | constant.numeric",
+            "direction": "previous",
+            "extend": true
+        }
+    },
+    // Select Next / Previous: Function / Class
+    {
+        "keys": [
+            "alt+ctrl+super+f"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "selector": "entity.name"
+        }
+    },
+    {
+        "keys": [
+            "alt+ctrl+super+w"
+        ],
+        "command": "jumper_select_selector",
+        "args": {
+            "direction": "previous",
+            "selector": "entity.name"
+        }
+    },
+]

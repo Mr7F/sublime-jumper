@@ -1,0 +1,10 @@
+{
+    // The "Quick Scope" labels are shown only on the current line
+    "jumper_quick_scope": "line",
+    // Characters use for the label (closed labels first)
+    "jumper_go_to_anywhere_charset": "tnseriaogmdhc,x.plfuwyvkbj:z123456789TNSERIAOGMDHCXPLFUWYVKBJ",
+    // The "Go To Anywhere" command is case-sensitive
+    "jumper_go_to_anywhere_case_sensitive": false,
+    // The "Go To Anywhere" command only goes to the start of the words
+    "jumper_go_to_anywhere_word_mode": true,
+}

@@ -2,9 +2,7 @@ import json
 import string
 
 filenames = [
-    "Default (Linux).sublime-keymap",
-    "Default (OSX).sublime-keymap",
-    "Default (Windows).sublime-keymap",
+    # "Default.sublime-keymap",
 ]
 
 shortcut_choose_location = "alt+ctrl+super+find"
