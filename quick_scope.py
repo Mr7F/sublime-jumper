@@ -13,7 +13,10 @@ class JumperQuickScopeCommand(sublime_plugin.TextCommand):
     """Go to the word labelled by a character."""
 
     def run(self, edit, character, extend=False, included=True):
-        self.regions = _quick_scope_get_labels(self.view)
+        self.regions = {
+            selection.to_tuple(): _quick_scope_get_labels(self.view, selection)
+            for selection in self.view.sel()
+        }
 
         if character in " \t":
             _input_panel_opened[self.view.id()] = True
@@ -31,10 +34,12 @@ class JumperQuickScopeCommand(sublime_plugin.TextCommand):
         if character in "'`\"":
             character = "'"
 
-        if character in self.regions:
-            selection = self.view.sel()[0]
-            self.view.sel().clear()
-            self.regions[character].jump_to(self.view, selection, extend, included)
+        for selection in self.view.sel():
+            if character in self.regions[selection.to_tuple()]:
+                self.view.sel().subtract(selection)
+                self.regions[selection.to_tuple()][character].jump_to(
+                    self.view, selection, extend, included
+                )
 
     def on_cancel(self):
         self.view.window().run_command("hide_panel", {"cancel": True})
@@ -55,11 +60,13 @@ class JumperQuickScopeCommand(sublime_plugin.TextCommand):
         else:
             _quick_scope_show_labels(self.view, 0)
 
-        if value in self.regions:
-            selection = self.view.sel()[0]
-            self.view.sel().clear()
-            self.regions[value].jump_to(self.view, selection, bool(extend), extend == 2)
-            self.on_cancel()
+        for selection in self.view.sel():
+            if value in self.regions[selection.to_tuple()]:
+                self.view.sel().subtract(selection)
+                self.regions[selection.to_tuple()][value].jump_to(
+                    self.view, selection, bool(extend), extend == 2
+                )
+                self.on_cancel()
 
 
 class SelectionShowQuickScopeWordListener(sublime_plugin.EventListener):
@@ -87,20 +94,24 @@ def _quick_scope_show_labels(view, extend=0):
     flags = 512 | 32 | 256 if extend != 2 else sublime.DRAW_SOLID_UNDERLINE | 32 | 256
     view.add_regions(
         "jumper_quick_scope",
-        [r.label_region for r in _quick_scope_get_labels(view).values()],
+        [
+            r.label_region
+            for selection in view.sel()
+            for r in _quick_scope_get_labels(view, selection).values()
+        ],
         scope=scope,
         flags=flags,
     )
 
 
-def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
-    if len(view.sel()) != 1:
+def _quick_scope_get_labels(view, selection) -> "dict[str, JumperLabel]":
+    if len(view.sel()) == 0:
         return {}
 
     target = setting("jumper_quick_scope", view)
 
-    a, b = sorted(view.sel()[0].to_tuple())
-    line_region = view.line(view.sel()[0])
+    a, b = sorted(selection.to_tuple())
+    line_region = view.line(selection)
 
     word_bounds = re.escape(get_word_separators(view))
 
@@ -129,7 +140,7 @@ def _quick_scope_get_labels(view) -> "dict[str, JumperLabel]":
             # TODO: better algorithm
             continue
 
-        if min(view.sel()[0]) == min(r):
+        if min(selection) == min(r):
             # Do not highlight the current cursor position
             # And try to use the caracter for a missong region if possible
             regions[c] = JumperLabel(r, c, sublime.Region(r.a, r.a))
