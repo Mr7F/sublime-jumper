@@ -108,7 +108,10 @@ def _quick_scope_get_labels(view, selection) -> "dict[str, JumperLabel]":
     if len(view.sel()) == 0:
         return {}
 
-    target = setting("jumper_quick_scope", view)
+    if len(view.sel()) > 1:
+        target = "line"
+    else:
+        target = setting("jumper_quick_scope", view)
 
     a, b = sorted(selection.to_tuple())
     line_region = view.line(selection)
