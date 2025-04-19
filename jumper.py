@@ -1,6 +1,5 @@
 import html
 import re
-import string
 from collections import defaultdict
 
 import sublime
@@ -275,11 +274,13 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 if borders >= 1:
                     add_style["background-color"] = ""
                     add_style["border-radius"] = "0px"
+                    add_style["padding-bottom"] = "-1px"
                     add_style["border-bottom"] = f"1px solid {color}"
                 if borders >= 2:
                     add_style["padding-right"] = "-1px"
                     add_style["border-right"] = f"1px solid {color}"
                 if borders >= 3:
+                    add_style["padding-top"] = "-1px"
                     add_style["border-top"] = f"1px solid {color}"
                 if borders >= 4:
                     add_style["padding-left"] = "-1px"
