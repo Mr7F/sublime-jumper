@@ -25,8 +25,8 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
 
         if _history_position >= len(_history):
             _history_position = len(_history) - 1
-        if _history_position < 0:
-            _history_position = 0
+        if _history_position < -1:
+            _history_position = -1
 
         while True:
             _history_position += 1 if direction == "previous" else -1
@@ -93,6 +93,7 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
 
         region = view.transform_region_from(position.position, position.change_id).a
         if region < 0:
+            print("Can not find original position", position.position, region)
             region = position.position.a
 
         view.sel().clear()
@@ -123,7 +124,7 @@ class JumperPreviousModificationListener(sublime_plugin.ViewEventListener):
         ]
 
         _history.insert(0, next_item)
-        _history_position = 0
+        _history_position = -1
 
         _history = _history[:1000]
 
