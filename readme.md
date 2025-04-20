@@ -248,6 +248,29 @@ Select the content of the next / previous `(){}[]` (using selector, to skip fals
 },
 ```
 
+## Go To Previous Modification
+["Go To Modification" on steroid.](https://www.youtube.com/watch?v=EmequlAceR8) The command `jumper_previous_modification` allow you to go to the next / previous modification, even if it was
+- in a different tab
+- in a different panel
+- in a different window
+- in a non-saved sheet
+
+It will remember where the file was opened, and try to re-open it at the same place if possible (if not, it will re-open the file in the current window).
+
+By default, it won't jump many time on the same line.
+
+```json
+{
+    "keys": ["ctrl+."],
+    "command": "jumper_previous_modification"
+},
+{
+    "keys": ["ctrl+,"],
+    "command": "jumper_previous_modification",
+    "args": {"direction": "next"}
+},
+```
+
 # TODO
 - Remove `create_keybind.py` and add keybind in the readme once https://github.com/sublimehq/sublime_text/issues/6650 is fixed
 - Find a way to add letter as row number to jump faster, once https://github.com/sublimehq/sublime_text/issues/6654 is done

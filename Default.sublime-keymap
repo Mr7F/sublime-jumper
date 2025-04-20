@@ -97,6 +97,22 @@
             "character": " "
         },
     },
+    // Go To Modification
+    {
+        "keys": [
+            "ctrl+,"
+        ],
+        "command": "jumper_previous_modification"
+    },
+    {
+        "keys": [
+            "ctrl+."
+        ],
+        "command": "jumper_previous_modification",
+        "args": {
+            "direction": "next"
+        }
+    },
     // Same Selection
     {
         "keys": [
