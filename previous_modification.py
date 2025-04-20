@@ -82,12 +82,6 @@ class JumperPreviousModificationListener(sublime_plugin.ViewEventListener):
     def on_modified_async(self):
         global _history, _history_position
 
-        # If we moved in the history, we need to clean it
-        while (
-            len(_history) >= _history_position and len(_history) and _history_position
-        ):
-            _history.pop()
-
         # If the previous history item is in the same line, keep the most recent one
         next_item = HistoryItem(self.view)
         _history = [
