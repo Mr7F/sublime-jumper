@@ -35,7 +35,11 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
 
             position = _history[_history_position]
 
-            if position.view == self.view and (per_file or position.line(self.view) in [self.view.line(s.a) for s in self.view.sel()]):
+            if position.view == self.view and (
+                per_file
+                or position.line(self.view)
+                in [self.view.line(s.a) for s in self.view.sel()]
+            ):
                 continue
 
             window = (
@@ -54,13 +58,13 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
                     # Open a new view, close it if no modification
                     _views_to_close.add(view)
 
-                # Update history to match the new view / window
-                from_view = position.view
-                from_window = position.window
-                for h in _history:
-                    if position.view == from_view and position.window == from_window:
-                        position.view = view
-                        position.window = window
+                    # Update history to match the new view / window
+                    from_view = position.view
+                    from_window = position.window
+                    for h in _history:
+                        if h.view == from_view and h.window == from_window:
+                            h.view = view
+                            h.window = window
 
                 self._close_view_to_be_closed(view)
 
@@ -103,7 +107,6 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
                 _views_to_close.remove(view_to_close)
 
 
-
 class JumperPreviousModificationListener(sublime_plugin.ViewEventListener):
     def on_modified_async(self):
         global _history, _history_position, _views_to_close
@@ -114,7 +117,9 @@ class JumperPreviousModificationListener(sublime_plugin.ViewEventListener):
         # If the previous history item is in the same line, keep the most recent one
         next_item = HistoryItem(self.view)
         _history = [
-            h for h in _history if h.view != self.view or h.line(self.view) != next_item.line(self.view)
+            h
+            for h in _history
+            if h.view != self.view or h.line(self.view) != next_item.line(self.view)
         ]
 
         _history.insert(0, next_item)
