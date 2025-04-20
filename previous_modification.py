@@ -19,7 +19,7 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
     TODO: option to navigate per file and not per line
     """
 
-    def run(self, edit, direction="previous"):
+    def run(self, edit, direction="previous", per_file=False):
         global _history, _history_position
 
         if _history_position >= len(_history):
@@ -27,14 +27,15 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
         if _history_position < 0:
             _history_position = 0
 
-        print("_history_position", _history_position, len(_history))
-
         while True:
             _history_position += 1 if direction == "previous" else -1
             if _history_position >= len(_history) or _history_position < 0:
                 return
 
             position = _history[_history_position]
+
+            if position.view == self.view and per_file:
+                continue
 
             window = (
                 position.window if position.window.is_valid() else self.view.window()

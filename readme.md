@@ -261,13 +261,23 @@ By default, it won't jump many time on the same line.
 
 ```json
 {
-    "keys": ["ctrl+."],
+    "keys": ["ctrl+,"],
     "command": "jumper_previous_modification"
 },
 {
-    "keys": ["ctrl+,"],
+    "keys": ["ctrl+."],
     "command": "jumper_previous_modification",
     "args": {"direction": "next"}
+},
+{
+    "keys": ["ctrl+shift+,"],
+    "command": "jumper_previous_modification",
+    "args": {"per_file": true}
+},
+{
+    "keys": ["ctrl+shift+."],
+    "command": "jumper_previous_modification",
+    "args": {"direction": "next", "per_file": true}
 },
 ```
 

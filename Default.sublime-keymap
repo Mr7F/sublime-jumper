@@ -113,6 +113,25 @@
             "direction": "next"
         }
     },
+    {
+        "keys": [
+            "ctrl+shift+,"
+        ],
+        "command": "jumper_previous_modification",
+        "args": {
+            "per_file": true,
+        }
+    },
+    {
+        "keys": [
+            "ctrl+shift+."
+        ],
+        "command": "jumper_previous_modification",
+        "args": {
+            "direction": "next",
+            "per_file": true,
+        }
+    },
     // Same Selection
     {
         "keys": [
