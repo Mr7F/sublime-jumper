@@ -249,7 +249,7 @@ Select the content of the next / previous `(){}[]` (using selector, to skip fals
 ```
 
 ## Go To Previous Modification
-["Go To Modification" on steroid.](https://www.youtube.com/watch?v=EmequlAceR8) The command `jumper_previous_modification` allow you to go to the next / previous modification, even if it was
+["Go To Modification" on steroid. (see demo)](https://youtu.be/QUIU8pPL6QE) The command `jumper_previous_modification` allow you to go to the next / previous modification, even if it was
 - in a different tab
 - in a different panel
 - in a different window
@@ -282,6 +282,8 @@ You can also go to next / previous modified file.
     "args": {"direction": "next", "per_file": true}
 },
 ```
+
+If it open a new sheet, it will be closed automatically if no modification are made inside.
 
 # TODO
 - Remove `create_keybind.py` and add keybind in the readme once https://github.com/sublimehq/sublime_text/issues/6650 is fixed

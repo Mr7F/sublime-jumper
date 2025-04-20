@@ -9,6 +9,7 @@ import sublime_plugin
 
 _history = []
 _history_position = 0
+_views_to_close = set()
 
 
 class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
@@ -20,7 +21,7 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
     """
 
     def run(self, edit, direction="previous", per_file=False):
-        global _history, _history_position
+        global _history, _history_position, _views_to_close
 
         if _history_position >= len(_history):
             _history_position = len(_history) - 1
@@ -34,7 +35,7 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
 
             position = _history[_history_position]
 
-            if position.view == self.view and per_file:
+            if position.view == self.view and (per_file or position.line(self.view) in [self.view.line(s.a) for s in self.view.sel()]):
                 continue
 
             window = (
@@ -48,15 +49,31 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
                     flags=sublime.FORCE_GROUP,
                     group=position.group,
                 )
+
+                if position.view != view:
+                    # Open a new view, close it if no modification
+                    _views_to_close.add(view)
+
+                # Update history to match the new view / window
+                from_view = position.view
+                from_window = position.window
+                for h in _history:
+                    if position.view == from_view and position.window == from_window:
+                        position.view = view
+                        position.window = window
+
+                self._close_view_to_be_closed(view)
+
                 if view.is_loading():
                     sublime.set_timeout_async(lambda: self._set_cursor(view, position))
                 else:
                     self._set_cursor(view, position)
                 return
 
-            if position.window.is_valid():
+            if position.view.window():
                 # not saved file
-                window.bring_to_front()
+                position.view.window().bring_to_front()
+                self._close_view_to_be_closed(position.view)
                 self._set_cursor(position.view, position)
                 return
 
@@ -78,22 +95,32 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
         view.sel().add(region)
         view.show(region, animate=False)
 
+    def _close_view_to_be_closed(self, except_view):
+        global _views_to_close
+        for view_to_close in _views_to_close.copy():
+            if view_to_close != except_view:
+                view_to_close.close()
+                _views_to_close.remove(view_to_close)
+
+
 
 class JumperPreviousModificationListener(sublime_plugin.ViewEventListener):
     def on_modified_async(self):
-        global _history, _history_position
+        global _history, _history_position, _views_to_close
+
+        if self.view in _views_to_close:
+            _views_to_close.remove(self.view)
 
         # If the previous history item is in the same line, keep the most recent one
         next_item = HistoryItem(self.view)
         _history = [
-            h for h in _history if h.line(self.view) != next_item.line(self.view)
+            h for h in _history if h.view != self.view or h.line(self.view) != next_item.line(self.view)
         ]
 
         _history.insert(0, next_item)
         _history_position = 0
 
         _history = _history[:1000]
-        print(_history)
 
 
 class HistoryItem:
