@@ -259,6 +259,8 @@ It will remember where the file was opened, and try to re-open it at the same pl
 
 By default, it won't jump many time on the same line.
 
+You can also go to next / previous modified file.
+
 ```json
 {
     "keys": ["ctrl+,"],
