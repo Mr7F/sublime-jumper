@@ -109,6 +109,9 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
         matches = matches[: len(charset)]
         # Make labels deterministic
         before = [m for m in matches if m.begin() < start_cursor]
+        if view != self.view:
+            # view not having the focus, do not hide label for current position
+            start_cursor -= 1
         after = [m for m in matches if m.begin() > start_cursor]
         positions = {}
         for i, region in enumerate(after):
