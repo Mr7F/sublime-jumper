@@ -1,3 +1,4 @@
+from collections import defaultdict
 import html
 import re
 
@@ -127,16 +128,13 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
     def _find_match_views(self, char, label_search=""):
         """Find the matching chars in all active view and add labels."""
         if char != getattr(self, "char", None):
-            self.positions: "dict[str, tuple[JumperLabel, View]]" = {}
+            self.positions: "dict[View, dict[str, JumperLabel]]" = {}
             self.char = char
             if len(char) >= self.search_length:
                 charset = self.charset.copy()
                 for view in views:
-                    positions = self._find_match(char, view, charset)
-                    charset = [c for c in charset if c not in positions]
-                    self.positions.update(
-                        {c: (region, view) for c, region in positions.items()}
-                    )
+                    self.positions[view] = self._find_match(char, view, charset)
+                    charset = [c for c in charset if c not in self.positions[view]]
 
         self._show_labels(label_search)
 
@@ -145,13 +143,13 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
         return setting("jumper_go_to_anywhere_search_length", self.view, 1)
 
     def _show_labels(self, label_search=""):
-        for view, values in self._positions_per_view.items():
+        for view, values in self.positions.items():
             view.run_command(
                 "select_char_selection_add_labels",
                 {
                     "positions": [
                         (c, label.label_region.a, label.label_region.b)
-                        for c, label in values
+                        for c, label in values.items()
                     ],
                     "label_search": label_search,
                     "extend": self.extend,
@@ -168,17 +166,19 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
         ]
         return sorted(views, key=lambda v: v != self.view)
 
-    @property
-    def _positions_per_view(self):
-        res = {view: [] for view in views}
-        for c, (region, view) in self.positions.items():
-            res[view].append((c, region))
-        return res
-
     def on_change(self, value):
         char, search_label = value[: self.search_length], value[self.search_length :]
 
-        if search_label.strip() in self.positions:
+        target_view, jump = next(
+            (
+                (view, values[search_label.strip()])
+                for view, values in self.positions.items()
+                if search_label.strip() in values
+            ),
+            (None, None),
+        )
+
+        if jump is not None:
             self.on_cancel()
 
         # Switch selection mode
@@ -199,8 +199,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 
         search_label = search_label.strip()
 
-        if search_label in self.positions:
-            target_view = self.positions[search_label][1]
+        if jump is not None:
             self.view.window().focus_view(target_view)
 
             selection = list(target_view.sel())
@@ -209,12 +208,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 
             target_view.sel().clear()
             for sel in selection:
-                self.positions[search_label][0].jump_to(
-                    target_view,
-                    sel,
-                    bool(self.extend),
-                    self.extend == 2,
-                )
+                jump.jump_to(target_view, sel, bool(self.extend), self.extend == 2)
 
             target_view.show(target_view.sel()[0])
 
