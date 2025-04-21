@@ -1,10 +1,6 @@
 import sublime
 import sublime_plugin
-
 from .utils import select_next_region
-
-_string_with_quote = "meta.string | string.quoted.double.json"
-_string_selector = f"(({_string_with_quote}) - punctuation.definition.string.begin - punctuation.definition.string.end) | meta.interpolation"
 
 
 class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
@@ -16,21 +12,52 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, direction="next", selector=None, extend=False):
         if selector is None:
-            strings = self.view.find_by_selector(_string_selector)
+            raw_strings = self.view.find_by_selector(
+                "meta.string | string.quoted.double.json"
+            )
 
-            # Find empty strings
-            all_strings = self.view.find_by_selector(_string_with_quote)
-            strings += [
-                sublime.Region(r.a + 1, r.b - 1) for r in all_strings if len(r) == 2
-            ]
-            # Triple quote empty in python
-            strings += [
-                sublime.Region(r.a + 3, r.b - 3)
-                for r in all_strings
-                if len(r) == 6
-                and self.view.match_selector(r.a, "meta.string.python")
-                and self.view.substr(r) in ('"' * 6, "'" * 6)
-            ]
+            selector = "meta.string"
+            for _ in range(5):
+                # String inside template string
+                selector += " meta.string"
+                to_add = self.view.find_by_selector(selector)
+                raw_strings += to_add
+                if not to_add:
+                    break
+
+            # remove the quotes
+            strings = []
+            for region in raw_strings.copy():
+                scopes = self.view.extract_tokens_with_scopes(region)
+                scopes = [(r, s.strip().split(" ")[-1]) for r, s in scopes]
+                print(scopes)
+                start = next(
+                    (
+                        i
+                        for i in range(len(scopes))
+                        if "punctuation.definition.string.begin" not in scopes[i][1]
+                    ),
+                    None,
+                )
+                end = next(
+                    (
+                        i
+                        for i in range(len(scopes) - 1, -1, -1)
+                        if "punctuation.definition.string.end" not in scopes[i][1]
+                    ),
+                    None,
+                )
+                if start is None or end is None:
+                    continue
+
+                r = [x for rr, _ in scopes[start : end + 1] for x in rr]
+                if r:
+                    strings.append(sublime.Region(min(r), max(r)))
+                else:
+                    # empty string, heuristic, take the middle of the string
+                    mid = (region.a + region.b) // 2
+                    strings.append(sublime.Region(mid, mid))
+
         else:
             strings = self.view.find_by_selector(selector)
 
