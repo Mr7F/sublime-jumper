@@ -40,7 +40,14 @@ If the charset is not big enough, you can press many keys to jump where you want
 },
 ````
 
-Settings
+
+The labels are **deterministic**, that way you can build muscle memory when you know how many matches are between the cursor and your target. You can change the charset to use your home row, the characters used:
+- First match after the cursor: first letter of the charset
+- First match before the cursor: second letter of the charset
+- Second match after the cursor: third letter of the charset
+- Second match before the cursor: fourth letter of the charset
+- ...
+
 ```json
 {
     "jumper_go_to_anywhere_charset": "tnseriaogmdhc,x.plfuwyvkbj:z123456789TNSERIAOGMDHCXPLFUWYVKBJ{}@%$&!#|^'-_=/;()"
@@ -78,13 +85,6 @@ When the label has more than one character (because a lot of text matched), you 
 </p>
 
 You can set the setting `jumper_go_to_anywhere_search_length`, if you want to type more than one character before typing the label. Set it to `2` to make the plugin work like [leap.vim](https://github.com/ggandor/leap.nvim)
-
-The labels are **deterministic**, that way you can build muscle memory when you know how many matches are between the cursor and your target. You can change the charset to use your home row, the characters used:
-- First match after the cursor: first letter of the charset
-- First match before the cursor: second letter of the charset
-- Second match after the cursor: third letter of the charset
-- Second match before the cursor: fourth letter of the charset
-- ...
 
 
 ## Technical
