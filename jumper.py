@@ -1,6 +1,5 @@
 import html
 import re
-from collections import defaultdict
 
 import sublime
 import sublime_plugin
@@ -40,8 +39,6 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             sheet.close()
         sheets_per_view = {}
 
-        self.char = character
-
         self.edit = edit
         self.charset = setting("jumper_go_to_anywhere_charset", self.view)
         self.case_sensitive = setting("jumper_go_to_anywhere_case_sensitive", self.view)
@@ -70,13 +67,15 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 
         self.view.window().show_input_panel(
             "Select to" if extend else "Jump to",
-            " " if self.extend else "",
+            character + (" " if self.extend else ""),
             self.on_cancel,
             self.on_change,
             self.on_cancel,
         )
 
     def _find_match(self, char, view, charset) -> "dict[str, JumperLabel]":
+        if not char.strip():
+            return {}
         visible_region = views[view]
         start_cursor = (
             view.sel()[0].begin()
@@ -101,7 +100,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             if self.word_mode:
                 seps = get_word_separators(view) + " \n"
                 if not char.startswith(tuple(seps)):
-                    char = f"(?<=[{re.escape(seps)}]){char}[^{re.escape(seps)}]*"
+                    char = f"(?<=[{re.escape(seps)}])({char})[^{re.escape(seps)}]*"
 
             matches = view.find_all(char, flags, within=visible_region)
 
@@ -109,20 +108,27 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
         matches = matches[: len(charset)]
         return {c: JumperLabel(region, c) for c, region in zip(charset, matches)}
 
-    def _find_match_views(self, char, search=""):
+    def _find_match_views(self, char, label_search=""):
         """Find the matching chars in all active view and add labels."""
-        self.positions: "dict[str, tuple[JumperLabel, View]]" = {}
-        done = 0
-        for view in views:
-            positions = self._find_match(char, view, self.charset[done:])
-            done += len(positions)
-            self.positions.update(
-                {c: (region, view) for c, region in positions.items()}
-            )
+        if char != getattr(self, "char", None):
+            self.positions: "dict[str, tuple[JumperLabel, View]]" = {}
+            self.char = char
+            if len(char) >= self.search_length:
+                done = 0
+                for view in views:
+                    positions = self._find_match(char, view, self.charset[done:])
+                    done += len(positions)
+                    self.positions.update(
+                        {c: (region, view) for c, region in positions.items()}
+                    )
 
-        self._show_labels(search)
+        self._show_labels(label_search)
 
-    def _show_labels(self, search=""):
+    @property
+    def search_length(self):
+        return setting("jumper_go_to_anywhere_search_length", self.view, 1)
+
+    def _show_labels(self, label_search=""):
         for view, values in self._positions_per_view.items():
             view.run_command(
                 "select_char_selection_add_labels",
@@ -131,7 +137,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
                         (c, label.label_region.a, label.label_region.b)
                         for c, label in values
                     ],
-                    "search": search,
+                    "label_search": label_search,
                     "extend": self.extend,
                 },
             )
@@ -148,35 +154,37 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 
     @property
     def _positions_per_view(self):
-        res = defaultdict(list)
+        res = {view: [] for view in views}
         for c, (region, view) in self.positions.items():
             res[view].append((c, region))
         return res
 
     def on_change(self, value):
-        if value.strip() in self.positions:
+        char, search_label = value[: self.search_length], value[self.search_length :]
+
+        if search_label.strip() in self.positions:
             self.on_cancel()
 
         # Switch selection mode
-        if value == " ":
+        if search_label == " ":
             self.extend = 1
-            self._show_labels(value.strip())
+            self._find_match_views(char, search_label.strip())
             return
 
-        if value == "\t":
+        if search_label == "\t":
             self.extend = 2
-            self._show_labels(value.strip())
+            self._find_match_views(char, search_label.strip())
             return
 
-        if not value:
+        if not search_label:
             self.extend = 0
-            self._show_labels(value.strip())
+            self._find_match_views(char, search_label.strip())
             return
 
-        value = value.strip()
+        search_label = search_label.strip()
 
-        if value in self.positions:
-            target_view = self.positions[value][1]
+        if search_label in self.positions:
+            target_view = self.positions[search_label][1]
             self.view.window().focus_view(target_view)
 
             selection = list(target_view.sel())
@@ -185,7 +193,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 
             target_view.sel().clear()
             for sel in selection:
-                self.positions[value][0].jump_to(
+                self.positions[search_label][0].jump_to(
                     target_view,
                     sel,
                     bool(self.extend),
@@ -195,8 +203,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             target_view.show(target_view.sel()[0])
 
         else:
-            # Update color of phantom
-            self._show_labels(value)
+            self._find_match_views(char, search_label)
 
     def on_cancel(self, *args, **kwargs):
         if self.exit:
@@ -213,7 +220,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
     """Do those modifications in a command, to easily undo it once we are done."""
 
-    def run(self, edit, positions, search, extend):
+    def run(self, edit, positions, label_search, extend):
         self.extend = extend
 
         visible_region = views.get(self.view) or self.view.visible_region()
@@ -245,7 +252,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 ({1: style["yellowish"], 2: style["bluish"]}).get(
                     int(extend), style["pinkish"]
                 )
-                if c.startswith(search)
+                if c.startswith(label_search)
                 else style["caret"]
             )
 
@@ -260,14 +267,14 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 size = 0  # Jump to end of line
 
             if setting("jumper_go_to_anywhere_no_borders_label", self.view):
-                label = c[len(search) : len(search) + 1] or c[-1]
+                label = c[len(label_search) : len(label_search) + 1] or c[-1]
 
             else:
                 # Show border to specify the number of time we need to press the "multi-label" character
                 label = c[-1]
                 borders = next(
-                    (i for i, (a, b) in enumerate(zip(search, c)) if a != b),
-                    len(c) - len(search),
+                    (i for i, (a, b) in enumerate(zip(label_search, c)) if a != b),
+                    len(c) - len(label_search),
                 )
                 borders -= 1
 
@@ -288,7 +295,6 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
 
             text = (
                 text[:start]
-                + "<style>html, body {padding: 0px; margin: 0px}</style>"
                 + make_element(
                     "span",
                     label,
@@ -302,6 +308,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 + text[start + size :]
             )
 
+        text += "<style>html, body {padding: 0px; margin: 0px}</style>"
         text = text.replace("<br>", "<br>&#8203;")
 
         scroll_x, scroll_y = self.view.viewport_position()

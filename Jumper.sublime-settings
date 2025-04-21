@@ -7,4 +7,6 @@
     "jumper_go_to_anywhere_case_sensitive": false,
     // The "Go To Anywhere" command only goes to the start of the words
     "jumper_go_to_anywhere_word_mode": true,
+    // Number of character to type in "Go To Anywhere" before pressing the label
+    "jumper_go_to_anywhere_search_length": 1,
 }

@@ -77,6 +77,10 @@ When the label has more than one character (because a lot of text matched), you 
   <img src="img/demo_borders.gif">
 </p>
 
+You can set the setting `jumper_go_to_anywhere_search_length`, if you want to type more than one character before typing the label.
+
+Set it to `2` to make the plugin work like [leap.vim](https://github.com/ggandor/leap.nvim)
+
 ## Technical
 Sublime text doesn't support "phantom on top of text", so the default implementation use HTML sheet.
 
@@ -297,4 +301,3 @@ If it open a new sheet, it will be closed automatically if no modification are m
 - "Go To Anywhere", read `word_wrap` settings (set to "auto")
 - Improve `select_selector` once https://github.com/sublimehq/sublime_text/issues/6660 is fixed
 - Skip current selection (like ctrl+k, ctrl+d)
-- Flash mode: https://github.com/folke/flash.nvim
