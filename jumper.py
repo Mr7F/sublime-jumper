@@ -106,7 +106,23 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 
         matches = sorted(matches, key=lambda x: abs(x.begin() - start_cursor))
         matches = matches[: len(charset)]
-        return {c: JumperLabel(region, c) for c, region in zip(charset, matches)}
+        # Make labels deterministic
+        before = [m for m in matches if m.begin() < start_cursor]
+        after = [m for m in matches if m.begin() > start_cursor]
+        positions = {}
+        for i, region in enumerate(after):
+            if i >= len(charset) // 2:
+                break
+            c = charset[2 * i]
+            positions[c] = JumperLabel(region, c)
+
+        for i, region in enumerate(before):
+            if i >= len(charset) // 2:
+                break
+            c = charset[2 * i + 1]
+            positions[c] = JumperLabel(region, c)
+
+        return positions
 
     def _find_match_views(self, char, label_search=""):
         """Find the matching chars in all active view and add labels."""
@@ -114,10 +130,10 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             self.positions: "dict[str, tuple[JumperLabel, View]]" = {}
             self.char = char
             if len(char) >= self.search_length:
-                done = 0
+                charset = self.charset.copy()
                 for view in views:
-                    positions = self._find_match(char, view, self.charset[done:])
-                    done += len(positions)
+                    positions = self._find_match(char, view, charset)
+                    charset = [c for c in charset if c not in positions]
                     self.positions.update(
                         {c: (region, view) for c, region in positions.items()}
                     )
