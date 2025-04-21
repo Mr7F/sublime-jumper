@@ -1,6 +1,3 @@
-from binascii import b2a_base64
-from collections import deque
-
 import time
 
 import sublime
@@ -16,8 +13,6 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
     """Go to the previous / next modification.
 
     That command already exists in sublime text, but this one work across different files.
-
-    TODO: option to navigate per file and not per line
     """
 
     def run(self, edit, direction="previous", per_file=False):
@@ -28,25 +23,37 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
         if _history_position < -1:
             _history_position = -1
 
+        next_history_position = _history_position
+
         while True:
-            _history_position += 1 if direction == "previous" else -1
-            if _history_position >= len(_history) or _history_position < 0:
+            next_history_position += 1 if direction == "previous" else -1
+            if next_history_position >= len(_history) or next_history_position < 0:
                 return
 
-            position = _history[_history_position]
+            position = _history[next_history_position]
 
-            if position.view == self.view and (
-                per_file
-                or position.line(self.view)
-                in [self.view.line(s.a) for s in self.view.sel()]
-            ):
-                continue
+            if position.view == self.view:
+                if per_file or position.line(self.view) in [
+                    self.view.line(s.a) for s in self.view.sel()
+                ]:
+                    continue
+
+            if per_file and direction == "next":
+                # show the latest modification in the file
+                while (
+                    next_history_position - 1 >= 0
+                    and _history[next_history_position - 1].view
+                    == _history[next_history_position].view
+                ):
+                    next_history_position -= 1
+                position = _history[next_history_position]
 
             window = (
                 position.window if position.window.is_valid() else self.view.window()
             )
 
             if position.file_name:
+                _history_position = next_history_position
                 window.bring_to_front()
                 view = window.open_file(
                     position.file_name,
@@ -76,6 +83,7 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
 
             if position.view.window():
                 # not saved file
+                _history_position = next_history_position
                 position.view.window().bring_to_front()
                 self._close_view_to_be_closed(position.view)
                 self._set_cursor(position.view, position)
