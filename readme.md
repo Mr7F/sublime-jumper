@@ -141,6 +141,11 @@ The command `select_next_same_selection` will select the next / previous text ma
 (you can also add it to the current selection, and it will be the same as `find_under_expand`).
 
 ## Select Selector
+
+<p align="center">
+  <img src="img/demo_strings.gif">
+</p>
+
 The command `jumper_select_selector` select the next / previous text matching the sublime selector.
 
 The idea is to have something similar than "select inside parenthesis" command of Vim.
