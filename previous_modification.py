@@ -1,4 +1,5 @@
 import time
+import os.path
 
 import sublime
 import sublime_plugin
@@ -53,6 +54,8 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
             )
 
             if position.file_name:
+                if not os.path.isfile(position.file_name):
+                    continue
                 _history_position = next_history_position
                 window.bring_to_front()
                 view = window.open_file(
@@ -112,6 +115,7 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
         global _views_to_close
         for view_to_close in _views_to_close.copy():
             if view_to_close != except_view:
+                # view_to_close.set_scratch(True)
                 view_to_close.close()
                 _views_to_close.remove(view_to_close)
 
