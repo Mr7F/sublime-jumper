@@ -8,6 +8,24 @@ import sublime_plugin
 _history = []
 _history_position = 0
 _views_to_close = set()
+_cursor_queue = {}  # Will set the cursor at the given position when the view is loaded
+
+
+def _set_cursor(view, position):
+    """Set the cursor at the given position."""
+    assert not view.is_loading()
+
+    if view != view.window().active_view():
+        view.window().focus_view(view)
+
+    region = view.transform_region_from(position.position, position.change_id).a
+    if region < 0:
+        print("Can not find original position", position.position, region)
+        region = position.position.a
+
+    view.sel().clear()
+    view.sel().add(region)
+    view.show(region, animate=False)
 
 
 class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
@@ -17,7 +35,7 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
     """
 
     def run(self, edit, direction="previous", per_file=False):
-        global _history, _history_position, _views_to_close
+        global _history, _history_position, _views_to_close, _cursor_queue
 
         if _history_position >= len(_history):
             _history_position = len(_history) - 1
@@ -79,37 +97,16 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
                 self._close_view_to_be_closed(view)
 
                 if view.is_loading():
-                    sublime.set_timeout_async(lambda: self._set_cursor(view, position))
+                    _cursor_queue[view] = position
                 else:
-                    self._set_cursor(view, position)
-                return
+                    _set_cursor(view, position)
 
-            if position.view.window():
+            elif position.view.window():
                 # not saved file
                 _history_position = next_history_position
                 position.view.window().bring_to_front()
                 self._close_view_to_be_closed(position.view)
-                self._set_cursor(position.view, position)
-                return
-
-    def _set_cursor(self, view, position):
-        for _ in range(1000):
-            if not view.is_loading():
-                break
-
-            time.sleep(1 / 1000)
-
-        if view != view.window().active_view():
-            view.window().focus_view(view)
-
-        region = view.transform_region_from(position.position, position.change_id).a
-        if region < 0:
-            print("Can not find original position", position.position, region)
-            region = position.position.a
-
-        view.sel().clear()
-        view.sel().add(region)
-        view.show(region, animate=False)
+                _set_cursor(position.view, position)
 
     def _close_view_to_be_closed(self, except_view):
         global _views_to_close
@@ -139,6 +136,12 @@ class JumperPreviousModificationListener(sublime_plugin.ViewEventListener):
         _history_position = -1
 
         _history = _history[:1000]
+
+    def on_load(self):
+        global _cursor_queue
+        if self.view in _cursor_queue:
+            _set_cursor(self.view, _cursor_queue[self.view])
+            del _cursor_queue[self.view]
 
 
 class HistoryItem:
