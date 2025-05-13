@@ -100,13 +100,15 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
                     _cursor_queue[view] = position
                 else:
                     _set_cursor(view, position)
+                return
 
-            elif position.view.window():
+            if position.view.window():
                 # not saved file
                 _history_position = next_history_position
                 position.view.window().bring_to_front()
                 self._close_view_to_be_closed(position.view)
                 _set_cursor(position.view, position)
+                return
 
     def _close_view_to_be_closed(self, except_view):
         global _views_to_close
