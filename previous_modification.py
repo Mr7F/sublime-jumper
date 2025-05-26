@@ -35,6 +35,7 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, direction="previous", per_file=False):
         global _history, _history_position, _views_to_close, _cursor_queue
+        print("_history", _history)
 
         if _history_position >= len(_history):
             _history_position = len(_history) - 1
