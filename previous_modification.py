@@ -1,4 +1,3 @@
-import time
 import os.path
 
 import sublime
@@ -68,7 +67,9 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
                 position = _history[next_history_position]
 
             window = (
-                position.window if position.window.is_valid() else self.view.window()
+                position.window
+                if position.window and position.window.is_valid()
+                else self.view.window()
             )
 
             if position.file_name:
@@ -151,11 +152,10 @@ class HistoryItem:
         # open_file
         self.view = view
         self.change_id = view.change_id()
-        self.file_name = self.view.window().active_sheet().file_name()
-        self.sheet = self.view.window().active_sheet()
+        self.file_name = self.view.file_name()
         self.window = self.view.window()
         self.position = view.sel()[0]
-        self.group = self.view.window().active_group()
+        self.group = self.view.sheet().group()
 
     def region(self, view) -> int:
         region = view.transform_region_from(self.position, self.change_id).a

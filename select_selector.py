@@ -12,9 +12,7 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, direction="next", selector=None, extend=False):
         if selector is None:
-            raw_strings = self.view.find_by_selector(
-                "meta.string | string.quoted.double.json"
-            )
+            raw_strings = self.view.find_by_selector("meta.string | string.quoted")
 
             selector = "meta.string"
             for _ in range(5):
