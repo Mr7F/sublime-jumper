@@ -252,7 +252,6 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
         )
 
         style = self.view.style()
-        # print(style)
 
         positions = sorted(positions, key=lambda x: x[1], reverse=True)
         for i, (c, a, b) in enumerate(positions):
@@ -320,13 +319,15 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 + text[start + size :]
             )
 
+        offset = 1  # Adjust, so the text don't move
+
         text += "<style>html, body {padding: 0px; margin: 0px}</style>"
         text = text.replace("<br>", "<br>&#8203;")
 
         scroll_x, scroll_y = self.view.viewport_position()
-        gutter_width = scroll_x - self.view.window_to_layout((0, 0))[0]
+        gutter_width = scroll_x - self.view.window_to_layout((0, 0))[0] + offset
 
-        padding_top = self.view.text_to_layout(visible_region.a)[1] - scroll_y
+        padding_top = self.view.text_to_layout(visible_region.a)[1] - scroll_y - offset
 
         # print(self.view.text_to_layout(visible_region.a))
         # print(self.view.text_to_window(visible_region.a))
