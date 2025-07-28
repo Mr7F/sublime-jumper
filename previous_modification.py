@@ -27,6 +27,86 @@ def _set_cursor(view, position):
     view.show(region, animate=False)
 
 
+class JumperPreviousModificationPanelCommand(sublime_plugin.TextCommand):
+    # Show a panel with all the history
+    # Press enter to jump, or escape to go back
+    def run(self, edit):
+        self.window = self.view.window()
+        self.start_idx = _history_position
+        self.initial_pos = HistoryItem(self.view)
+        self.window.show_quick_panel(
+            [[h.file_name.split("/")[-1], h.file_name] for h in _history],
+            on_select=self.on_select,
+            on_highlight=self.on_highlight,
+            selected_index=_history_position,
+        )
+
+    def on_select(self, idx):
+        global _history_position
+        if idx < 0:
+            # Restore the initial position
+            if _jump_to_history(self.initial_pos, self.window):
+                _history_position = self.start_idx
+
+    def on_highlight(self, idx):
+        global _history_position
+        if _jump_to_history(_history[idx], self.window):
+            _history_position = idx
+
+
+def _close_view_to_be_closed(except_view):
+    global _views_to_close
+    for view_to_close in _views_to_close.copy():
+        if view_to_close != except_view:
+            # view_to_close.set_scratch(True)
+            view_to_close.close()
+            _views_to_close.remove(view_to_close)
+
+
+def _jump_to_history(position, window):
+    # Jump to the history and return True if we could jump
+    global _history, _views_to_close, _cursor_queue
+    if position.file_name:
+        if not os.path.isfile(position.file_name):
+            return False
+
+        window.bring_to_front()
+        view = window.open_file(
+            position.file_name,
+            flags=sublime.FORCE_GROUP,
+            group=position.group,
+        )
+
+        if position.view != view:
+            # Open a new view, close it if no modification
+            _views_to_close.add(view)
+
+            # Update history to match the new view / window
+            from_view = position.view
+            from_window = position.window
+            for h in _history:
+                if h.view == from_view and h.window == from_window:
+                    h.view = view
+                    h.window = window
+
+        _close_view_to_be_closed(view)
+
+        if view.is_loading():
+            _cursor_queue[view] = position
+        else:
+            _set_cursor(view, position)
+        return True
+
+    if position.view.window():
+        # not saved file
+        position.view.window().bring_to_front()
+        _close_view_to_be_closed(position.view)
+        _set_cursor(position.view, position)
+        return True
+
+    return False
+
+
 class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
     """Go to the previous / next modification.
 
@@ -72,53 +152,9 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
                 if position.window and position.window.is_valid()
                 else self.view.window()
             )
-
-            if position.file_name:
-                if not os.path.isfile(position.file_name):
-                    continue
+            if _jump_to_history(position, window):
                 _history_position = next_history_position
-                window.bring_to_front()
-                view = window.open_file(
-                    position.file_name,
-                    flags=sublime.FORCE_GROUP,
-                    group=position.group,
-                )
-
-                if position.view != view:
-                    # Open a new view, close it if no modification
-                    _views_to_close.add(view)
-
-                    # Update history to match the new view / window
-                    from_view = position.view
-                    from_window = position.window
-                    for h in _history:
-                        if h.view == from_view and h.window == from_window:
-                            h.view = view
-                            h.window = window
-
-                self._close_view_to_be_closed(view)
-
-                if view.is_loading():
-                    _cursor_queue[view] = position
-                else:
-                    _set_cursor(view, position)
                 return
-
-            if position.view.window():
-                # not saved file
-                _history_position = next_history_position
-                position.view.window().bring_to_front()
-                self._close_view_to_be_closed(position.view)
-                _set_cursor(position.view, position)
-                return
-
-    def _close_view_to_be_closed(self, except_view):
-        global _views_to_close
-        for view_to_close in _views_to_close.copy():
-            if view_to_close != except_view:
-                # view_to_close.set_scratch(True)
-                view_to_close.close()
-                _views_to_close.remove(view_to_close)
 
 
 class JumperPreviousModificationListener(sublime_plugin.ViewEventListener):
@@ -157,6 +193,7 @@ class HistoryItem:
         self.window = self.view.window()
         self.position = view.sel()[0]
         self.group = self.view.sheet().group()
+        self.name = self.file_name or view.name()
 
     def region(self, view) -> int:
         region = view.transform_region_from(self.position, self.change_id).a

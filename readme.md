@@ -300,6 +300,8 @@ You can also go to next / previous modified file.
 
 If it open a new sheet, it will be closed automatically if no modification are made inside.
 
+Run the command `jumper_previous_modification_panel` to open a panel with the history.
+
 # TODO
 - Remove `create_keybind.py` and add keybind in the readme once https://github.com/sublimehq/sublime_text/issues/6650 is fixed
 - Find a way to add letter as row number to jump faster, once https://github.com/sublimehq/sublime_text/issues/6654 is done
