@@ -8,6 +8,7 @@ _history = []
 _history_position = 0
 _views_to_close = set()
 _cursor_queue = {}  # Will set the cursor at the given position when the view is loaded
+_position_start = None
 
 
 def _set_cursor(view, position):
@@ -22,8 +23,9 @@ def _set_cursor(view, position):
         print("Can not find original position", position.position, region)
         region = position.position.a
 
-    view.sel().clear()
-    view.sel().add(region)
+    sel = view.sel()
+    sel.clear()
+    sel.add(region)
     view.show(region, animate=False)
 
 
@@ -114,8 +116,16 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
     """
 
     def run(self, edit, direction="previous", per_file=False):
-        global _history, _history_position, _views_to_close, _cursor_queue
+        global \
+            _history, \
+            _history_position, \
+            _views_to_close, \
+            _cursor_queue, \
+            _position_start
         print("_history", _history)
+
+        if _position_start is None:
+            _position_start = HistoryItem(self.view)
 
         if _history_position >= len(_history):
             _history_position = len(_history) - 1
@@ -127,6 +137,10 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
         while True:
             next_history_position += 1 if direction == "previous" else -1
             if next_history_position >= len(_history) or next_history_position < 0:
+                if direction != "previous" and _position_start is not None:
+                    if _jump_to_history(_position_start, _position_start.window):
+                        _history_position = next_history_position
+                    _position_start = None
                 return
 
             position = _history[next_history_position]
@@ -159,7 +173,7 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
 
 class JumperPreviousModificationListener(sublime_plugin.ViewEventListener):
     def on_modified_async(self):
-        global _history, _history_position, _views_to_close
+        global _history, _history_position, _views_to_close, _position_start
 
         if self.view in _views_to_close:
             _views_to_close.remove(self.view)
@@ -176,6 +190,7 @@ class JumperPreviousModificationListener(sublime_plugin.ViewEventListener):
         _history_position = -1
 
         _history = _history[:1000]
+        _position_start = None
 
     def on_load(self):
         global _cursor_queue
