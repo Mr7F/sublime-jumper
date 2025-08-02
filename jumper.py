@@ -43,6 +43,8 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
         self.charset = setting("jumper_go_to_anywhere_charset", self.view)
         self.case_sensitive = setting("jumper_go_to_anywhere_case_sensitive", self.view)
 
+        self.charset = re.sub(r"[\s\t|]", "", self.charset)  # Reserved for commands
+
         if not self.case_sensitive:
             self.charset = self.charset.lower()
 
@@ -74,7 +76,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
         )
 
     def _find_match(self, char, view, charset) -> "dict[str, JumperLabel]":
-        if not char.strip():
+        if not char.strip() and len(char) > 2:
             return {}
         visible_region = views[view]
         start_cursor = (
@@ -171,11 +173,16 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
     def on_change(self, value):
         char, search_label = value[: self.search_length], value[self.search_length :]
 
+        cmd = ""
+        if search_label and search_label[0] in " \t|":
+            cmd = search_label[0]
+            search_label = search_label[1:]
+
         target_view, jump = next(
             (
-                (view, values[search_label.strip()])
+                (view, values[search_label])
                 for view, values in self.positions.items()
-                if search_label.strip() in values
+                if search_label in values
             ),
             (None, None),
         )
@@ -184,22 +191,25 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             self.on_cancel()
 
         # Switch selection mode
-        if search_label == " ":
+        if cmd == " " and not search_label:
             self.extend = 1
-            self._find_match_views(char, search_label.strip())
+            self._find_match_views(char, search_label)
             return
 
-        if search_label == "\t":
+        if cmd == "\t" and not search_label:
             self.extend = 2
-            self._find_match_views(char, search_label.strip())
+            self._find_match_views(char, search_label)
+            return
+
+        if cmd == "|" and not search_label:
+            self.extend = 3
+            self._find_match_views(char, search_label)
             return
 
         if not search_label:
             self.extend = 0
-            self._find_match_views(char, search_label.strip())
+            self._find_match_views(char, search_label)
             return
-
-        search_label = search_label.strip()
 
         if jump is not None:
             self.view.window().focus_view(target_view)
@@ -208,9 +218,10 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
             if not selection and not self.extend:
                 selection = [target_view.visible_region()]
 
-            target_view.sel().clear()
+            if self.extend != 3:
+                target_view.sel().clear()
             for sel in selection:
-                jump.jump_to(target_view, sel, bool(self.extend), self.extend == 2)
+                jump.jump_to(target_view, sel, self.extend in (1, 2), self.extend == 2)
 
             target_view.show(target_view.sel()[0])
 
@@ -260,7 +271,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 continue
 
             color = (
-                ({1: style["yellowish"], 2: style["bluish"]}).get(
+                ({1: style["yellowish"], 2: style["bluish"], 3: style["greenish"]}).get(
                     int(extend), style["pinkish"]
                 )
                 if c.startswith(label_search)
