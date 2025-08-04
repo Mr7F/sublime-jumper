@@ -3,9 +3,9 @@
 Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMotion) and [Ace Jump](https://github.com/acejump/AceJump) it's also possible to press a shortcut,
 followed by a key, to highlight all matching character with a small label. Pressing the label jump to that position.
 In that mode, you can press
-- "space" then the label to select everything between the cursor and the target label excluded (the color will change)
-- "tab" then the label to select everything between the cursor and the target label included (the color will change)
-- "|" to keep the current selection and add a new cursor to the target
+- "`space`" then the label to select everything between the cursor and the target label excluded (the color will change)
+- "`tab`" then the label to select everything between the cursor and the target label included (the color will change)
+- "`|`" to keep the current selection and add a new cursor to the target
 
 Example:
 - `<shortcut> + a + x`: jump to the "a" labelled "x"
