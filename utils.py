@@ -95,7 +95,8 @@ def select_next_region(view, regions, direction="next", extend=False):
     The region can overlap (eg a nested json, etc).
     """
     if direction == "next":
-        regions = sorted(regions, key=lambda r: max(r))
+        # use max here to always explore child before parent
+        regions = sorted(regions, key=lambda r: min(r))
     else:
         regions = sorted(regions, key=lambda r: min(r), reverse=True)
 
@@ -110,9 +111,21 @@ def select_next_region(view, regions, direction="next", extend=False):
     to_show = None
     for sel in list(view.sel()):
         if direction == "next":
-            target = next((r for r in regions if max(sel) < max(r)), None)
+            # use max here to always explore child before parent
+            target = next((r for r in regions if min(sel) < min(r)), None)
         else:
-            target = next((r for r in regions if min(sel) > min(r)), None)
+            target = next(
+                (
+                    r
+                    for r in regions
+                    if min(sel) > min(r)
+                    # If the cursor is just after the opening parenthesis
+                    # and that we "select the previous parenthesis",
+                    # we want to select the content of the `()` where we are
+                    or (min(sel) == min(r) and max(sel) < max(r))
+                ),
+                None,
+            )
 
         if target is not None:
             if not extend:
@@ -122,6 +135,7 @@ def select_next_region(view, regions, direction="next", extend=False):
 
     if to_show is not None:
         view.show(to_show)
+        view.show(sublime.Region(to_show.a, to_show.a))
 
 
 def get_word_separators(view):

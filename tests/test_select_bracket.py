@@ -62,6 +62,30 @@ class TestDeferrable(DeferrableTestCase):
         self.assertEqual(len(self.view.sel()), 3)
         self.assertEqual(self.view.sel()[0].to_tuple(), (9, 13))
         self.assertEqual(self.view.sel()[1].to_tuple(), (19, 31))
-        self.assertEqual(self.view.sel()[2].to_tuple(), (56, 57))
+        self.assertEqual(self.view.sel()[2].to_tuple(), (55, 91))
 
+        self.view.run_command(
+            "jumper_select_next_bracket",
+            {"direction": "previous", "extend": False, "brackets_text": "{}"},
+        )
+        self.assertEqual(len(self.view.sel()), 2)
+        self.assertEqual(self.view.sel()[0].to_tuple(), (9, 13))
+        self.assertEqual(self.view.sel()[1].to_tuple(), (19, 31))
+
+        self.view.run_command(
+            "jumper_select_next_bracket",
+            {"direction": "next", "extend": False, "brackets_text": "{}"},
+        )
+        self.assertEqual(len(self.view.sel()), 1)
+        self.assertEqual(self.view.sel()[0].to_tuple(), (19, 31))
+
+        # Cursor just at the border of the (), should select the () content
+        self.view.sel().clear()
+        self.view.sel().add(sublime.Region(6, 12))
+        self.view.run_command(
+            "jumper_select_next_bracket",
+            {"direction": "previous", "extend": False, "brackets_text": "()"},
+        )
+        self.assertEqual(len(self.view.sel()), 1)
+        self.assertEqual(self.view.sel()[0].to_tuple(), (6, 32))
         self.view.close()
