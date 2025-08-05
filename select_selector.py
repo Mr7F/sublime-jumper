@@ -10,7 +10,14 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
     > https://www.sublimetext.com/docs/selectors.html
     """
 
-    def run(self, edit, direction="next", selector=None, extend=False):
+    def run(
+        self,
+        edit,
+        direction="next",
+        selector=None,
+        extend=False,
+        trim=False,
+    ):
         if selector is None:
             raw_strings = self.view.find_by_selector("meta.string | string.quoted")
 
@@ -28,7 +35,6 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
             for region in raw_strings.copy():
                 scopes = self.view.extract_tokens_with_scopes(region)
                 scopes = [(r, s.strip().split(" ")[-1]) for r, s in scopes]
-                print(scopes)
                 start = next(
                     (
                         i
@@ -58,5 +64,15 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
 
         else:
             strings = self.view.find_by_selector(selector)
+
+        if trim:
+            # Don't select starting / ending whitespace if any
+            old_strings = strings
+            strings = []
+            for reg in old_strings:
+                content = self.view.substr(reg)
+                l = len(content) - len(content.lstrip())
+                r = len(content) - len(content.rstrip())
+                strings.append(sublime.Region(reg.a + l, reg.b - r) if r or l else reg)
 
         select_next_region(self.view, strings, direction, extend)
