@@ -30,8 +30,8 @@ class SelectNextSameSelectionListener(sublime_plugin.ViewEventListener):
                 "jumper-select-next-same-selection",
                 [sublime.Region(position.a, position.a)],
                 icon="",
-                scope="region.greenish",
-                flags=sublime.DRAW_EMPTY_AS_OVERWRITE,
+                scope="region.orangish",
+                flags=sublime.DRAW_EMPTY,
             )
         else:
             view.erase_regions("jumper-select-next-same-selection")
