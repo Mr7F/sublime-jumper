@@ -28,10 +28,10 @@ class SelectNextSameSelectionListener(sublime_plugin.ViewEventListener):
         if len(view.sel()) > 1:
             view.add_regions(
                 "jumper-select-next-same-selection",
-                [sublime.Region(position.a, position.a)],
-                icon="",
-                scope="region.orangish",
-                flags=sublime.DRAW_EMPTY,
+                [sublime.Region(position.b - 1, position.b - 1)],
+                scope="region.greenish",
+                icon="dot",
+                flags=sublime.HIDE_ON_MINIMAP | 64,
             )
         else:
             view.erase_regions("jumper-select-next-same-selection")
