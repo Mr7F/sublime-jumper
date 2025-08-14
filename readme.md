@@ -151,6 +151,19 @@ A cool keybind is to use a shortcut for "Quick Scope", and that "shortcut, enter
 The command `select_next_same_selection` will select the next / previous text matching the current selection
 (you can also add it to the current selection, and it will be the same as `find_under_expand`).
 
+Like `find_under_expand`,
+- if you press the shortcut when no text selected, then it will search for the whole word
+- if you press the shortcut when a text is selected, then it will select the next text (whole word or not)
+- the difference is that you can go backward, and that it is always case sensitive
+
+<p align="center">
+  <img src="img/demo_same_selection.gif">
+</p>
+
+A dot is displayed in the gutter for the "main cursors" when they are many (the cursor from which the selection will be extended).
+
+That dot is "green" when in "text mode", or blue when in "word mode" (you pressed the shortcut without selecting anything).
+
 ## Select Selector
 
 <p align="center">
