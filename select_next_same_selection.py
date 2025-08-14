@@ -15,22 +15,17 @@ class SelectNextSameSelection(sublime_plugin.TextCommand):
             view = view.window().active_view()
 
         sel = SelectNextSameSelectionListener.get_main_cursor(view)
-        print("main cursor", sel)
         if sel is None:
             _selection_mode[view] = "text"  # Cursor moved
             sel = max(view.sel()) if direction == "next" else min(view.sel())
 
         if sel.a == sel.b:
             _selection_mode[view] = "word"
-            print("no sel", _selection_mode)
-            print(view.word(sel.a).to_tuple())
             view.run_command(
                 "multi_cursor_add",
                 {"cursor": view.word(sel.a).to_tuple(), "scope": "region.cyanish"},
             )
             return
-
-        print("sel", _selection_mode)
 
         text = view.substr(sel)
         flags = sublime.WRAP
@@ -48,14 +43,11 @@ class SelectNextSameSelection(sublime_plugin.TextCommand):
             sel.end() if direction == "next" else sel.begin(),
             flags,
         )
-        print("result", result, text.encode())
         if not result:
             return
         if not keep_selection:
             view.sel().subtract(sel)
 
-
-        print("show cursor")
         view.run_command(
             "multi_cursor_add",
             {"cursor": result.to_tuple(), "scope": color},
