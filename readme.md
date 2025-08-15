@@ -320,6 +320,6 @@ Run the command `jumper_previous_modification_panel` to open a panel with the hi
 - Remove `create_keybind.py` and add keybind in the readme once https://github.com/sublimehq/sublime_text/issues/6650 is fixed
 - Find a way to add letter as row number to jump faster, once https://github.com/sublimehq/sublime_text/issues/6654 is done
 - "Go To Anywhere", when clicking on a tab, the input panel should close
-- "Go To Anywhere", read `word_wrap` settings (set to "auto")
+- "Go To Anywhere", read `word_wrap` settings (set to "auto"), seems to be `&nbsp;`, but a bit tricky to split the lines at the same place (it change depending on the language)
 - Improve `select_selector` once https://github.com/sublimehq/sublime_text/issues/6660 is fixed
 - Skip current selection (like ctrl+k, ctrl+d)
