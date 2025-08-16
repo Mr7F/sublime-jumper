@@ -77,7 +77,8 @@ class SelectionShowQuickScopeWordListener(sublime_plugin.EventListener):
 
     def on_deactivated(self, view):
         if not _input_panel_opened.get(view.id()):
-            view.add_regions("jumper_quick_scope", [])
+            view.erase_regions("jumper_quick_scope")
+            view.erase_regions("jumper_quick_scope_line")
 
     def on_selection_modified_async(self, view):
         if _input_panel_opened.get(view.id()):
@@ -89,17 +90,52 @@ class SelectionShowQuickScopeWordListener(sublime_plugin.EventListener):
 
 
 def _quick_scope_show_labels(view, extend=0):
-    scope = ({1: "region.yellowish", 2: "region.bluish"}).get(int(extend), "white")
+    scope = ({1: "region.yellowish", 2: "region.bluish"}).get(int(extend), "comment.block")
+    flags = (
+        sublime.DRAW_SOLID_UNDERLINE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+    )
 
-    flags = 512 | 32 | 256 if extend != 2 else sublime.DRAW_SOLID_UNDERLINE | 32 | 256
+    lines = [view.line(s) for s in view.sel()]
+
+    # To change the text color
+    # https://github.com/sublimehq/sublime_text/issues/817#issuecomment-95211154
+    # flags = sublime.DRAW_NO_OUTLINE
+    # {
+    #     "scope": "meta.quickscope.current-line",
+    #     "background": "#2c333c",
+    #     "foreground": "white",
+    #     "font_style": "bold",
+    # },
+    # {
+    #     "scope": "meta.quickscope - meta.quickscope.current-line",
+    #     "background": "#1a1d22",
+    #     "foreground": "white",
+    #     "font_style": "bold",
+    # },
+
+    regions_lines = [
+        r.label_region
+        for selection in view.sel()
+        for r in _quick_scope_get_labels(view, selection).values()
+        if view.line(r.label_region) in lines
+    ]
+    regions_other_lines = [
+        r.label_region
+        for selection in view.sel()
+        for r in _quick_scope_get_labels(view, selection).values()
+        if view.line(r.label_region) not in lines
+    ]
+
+    view.add_regions(
+        "jumper_quick_scope_line",
+        regions_lines,
+        scope=f"{scope} meta.quickscope meta.quickscope.current-line",
+        flags=flags,
+    )
     view.add_regions(
         "jumper_quick_scope",
-        [
-            r.label_region
-            for selection in view.sel()
-            for r in _quick_scope_get_labels(view, selection).values()
-        ],
-        scope=scope,
+        regions_other_lines,
+        scope=f"{scope} meta.quickscope",
         flags=flags,
     )
 
@@ -120,13 +156,10 @@ def _quick_scope_get_labels(view, selection) -> "dict[str, JumperLabel]":
 
     search_re = f"^[^{word_bounds}\\s\\n]+|(?<=[{word_bounds}\\s\\n])[^{word_bounds}\\s\\n]+|[{word_bounds}]"
     result = view.find_all(search_re, within=line_region)
-    if target == "line":
-        # Do not make the label depending on the cursor if in line mode
-        # Start with small word to show more label statistically
-        aa = (line_region.a + line_region.b) // 2
-        result = sorted(result, key=lambda r: (abs(r.b - r.a), abs(r.a - aa)))
-    else:
-        result = sorted(result, key=lambda r: abs(r.a - a))
+    # Do not make the label depending on the cursor
+    # Start with small word to show more label statistically
+    aa = (line_region.a + line_region.b) // 2
+    result = sorted(result, key=lambda r: (abs(r.b - r.a), abs(r.a - aa)))
 
     regions = {}
     for r in result:
@@ -145,7 +178,7 @@ def _quick_scope_get_labels(view, selection) -> "dict[str, JumperLabel]":
 
         if min(selection) == min(r):
             # Do not highlight the current cursor position
-            # And try to use the caracter for a missong region if possible
+            # And try to use the character for a missing region if possible
             regions[c] = JumperLabel(r, c, sublime.Region(r.a, r.a))
             continue
         regions[c] = JumperLabel(r, c, sublime.Region(r.a + i, r.a + 1 + i))
@@ -171,6 +204,12 @@ def _quick_scope_get_labels(view, selection) -> "dict[str, JumperLabel]":
                     break
             else:
                 continue
+
+        if line_region == view.line(r.a):
+            # Do not highlight the current cursor position
+            # And try to use the character for a missing region if possible
+            regions[c] = JumperLabel(r, c, sublime.Region(r.a, r.a))
+            continue
 
         regions[c] = JumperLabel(r, c, sublime.Region(r.a + i, r.a + 1 + i))
 
