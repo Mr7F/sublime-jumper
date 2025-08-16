@@ -139,6 +139,11 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
                 for view in views:
                     self.positions[view] = self._find_match(char, view, charset)
                     charset = [c for c in charset if c not in self.positions[view]]
+            else:
+                # When `jumper_go_to_anywhere_search_length` > 1
+                # Then we want to show the HTML sheet after the first character pressed
+                for view in views:
+                    self.positions[view] = {}
 
         self._show_labels(label_search)
 
@@ -339,12 +344,6 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
         gutter_width = scroll_x - self.view.window_to_layout((0, 0))[0] + offset
 
         padding_top = self.view.text_to_layout(visible_region.a)[1] - scroll_y - offset
-
-        # print(self.view.text_to_layout(visible_region.a))
-        # print(self.view.text_to_window(visible_region.a))
-        # print(self.view.viewport_position())
-        # print(self.view.layout_to_window((0, 0)))
-        # print(self.view.window_to_layout((0, 0)))
 
         content = make_element(
             "div",
