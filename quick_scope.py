@@ -90,7 +90,7 @@ class SelectionShowQuickScopeWordListener(sublime_plugin.EventListener):
 
 
 def _quick_scope_show_labels(view, extend=0):
-    scope = ({1: "region.yellowish", 2: "region.bluish"}).get(int(extend), "comment.block")
+    scope = ({1: "region.yellowish", 2: "region.bluish"}).get(int(extend), "comment")
     flags = (
         sublime.DRAW_SOLID_UNDERLINE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
     )
