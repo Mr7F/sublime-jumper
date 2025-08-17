@@ -90,7 +90,12 @@ class SelectionShowQuickScopeWordListener(sublime_plugin.EventListener):
 
 
 def _quick_scope_show_labels(view, extend=0):
-    scope = ({1: "region.yellowish", 2: "region.bluish"}).get(int(extend), "comment")
+    # `comment` is not a valid scope for quick panel / console input
+    # (it will be displayed in blue)
+    scope = ({1: "region.yellowish", 2: "region.bluish"}).get(
+        int(extend),
+        "text.plain" if view.element() else "comment",
+    )
     flags = (
         sublime.DRAW_SOLID_UNDERLINE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
     )
