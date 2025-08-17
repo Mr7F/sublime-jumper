@@ -181,7 +181,7 @@ See:
 By default, the selector match the strings.
 
 ```json
-// Select strings
+// Select next / previous strings
 {
     "keys": ["alt+ctrl+super+'"],
     "command": "jumper_select_selector"
@@ -201,7 +201,7 @@ By default, the selector match the strings.
     "command": "jumper_select_selector",
     "args": {"direction": "previous", "extend": true}
 },
-// Select class / function
+// Select next / previous class / function
 {
     "keys": ["alt+ctrl+super+f"],
     "command": "jumper_select_selector",
@@ -212,7 +212,7 @@ By default, the selector match the strings.
     "command": "jumper_select_selector",
     "args": {"direction": "previous", "selector": "entity.name"}
 }
-// Jump to next / previous condition / loop
+// next / previous condition / loop
 {
     "keys": ["alt+ctrl+super+i"],
     "command": "jumper_select_selector",
