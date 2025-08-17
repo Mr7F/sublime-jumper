@@ -99,7 +99,7 @@ You can check the branch `master-all-labels-methods` to see all possible way to 
 
 ## Quick Scope
 Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope), each words get labelled by one letter inside of it,
-pressing a shortcut and then that letter will jump at the *start* of the word (the label is case insensitive to go faster).
+pressing a shortcut and then that letter will jump at the **start** of the word (the label is case insensitive to go faster).
 
 <p align="center">
   <img src="img/demo_quick_scope_word_mode.gif">
@@ -111,11 +111,11 @@ This is a test
 |    |  |  |
 
 ```
-- `<shortcut> t`: jump to *start* of "this"
-- `<shortcut> i`: jump to *start* of "is"
-- `<shortcut> e`: jump to *start* of "test"
+- `<shortcut> t`: jump to **start** of "this"
+- `<shortcut> i`: jump to **start** of "is"
+- `<shortcut> e`: jump to **start** of "test"
 
-For the other lines, it will show one character per line to jump at the start of that line.
+For the other lines, it will show one character per line to jump at the **start** of that line.
 
 To enable the highlight, set the settings `jumper_quick_scope` to true. Or, if you want to enable the feature only for the current line, set it to `"line"`.
 
@@ -277,6 +277,34 @@ Select the content of the next / previous `(){}[]` (using selector, to skip fals
 },
 ```
 
+Or if you want to select the next / previous parenthesis content:
+```json
+{
+    "keys": ["alt+ctrl+super+]"],
+    "command": "jumper_select_next_bracket",
+    "args": {
+      "brackets_text": "()"
+    },
+},
+{
+    "keys": ["alt+ctrl+super+["],
+    "command": "jumper_select_next_bracket",
+    "args": {"direction": "previous", "brackets_text": "()"}
+},
+{
+    "keys": ["shift+alt+ctrl+super+]"],
+    "command": "jumper_select_next_bracket",
+    "args": {"extend": true, "brackets_text": "()"}
+},
+{
+    "keys": ["shift+alt+ctrl+super+["],
+    "command": "jumper_select_next_bracket",
+    "args": {"direction": "previous", "extend": true, "brackets_text": "()"}
+}
+```
+
+If you are inside `()`, selecting "previous ()" will select the parent parenthesis, while selecting "next ()" will select the next one.
+
 ## Go To Previous Modification
 ["Go To Modification" on steroid. (see demo)](https://youtu.be/QUIU8pPL6QE) The command `jumper_previous_modification` allow you to go to the next / previous modification, even if it was
 - in a different tab
@@ -322,4 +350,3 @@ Run the command `jumper_previous_modification_panel` to open a panel with the hi
 - "Go To Anywhere", when clicking on a tab, the input panel should close
 - "Go To Anywhere", read `word_wrap` settings (set to "auto"), seems to be `&nbsp;`, but a bit tricky to split the lines at the same place (it change depending on the language)
 - Improve `select_selector` once https://github.com/sublimehq/sublime_text/issues/6660 is fixed
-- Skip current selection (like ctrl+k, ctrl+d)
