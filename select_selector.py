@@ -19,7 +19,9 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
         trim=False,
     ):
         if selector is None:
-            raw_strings = self.view.find_by_selector("meta.string | string.quoted")
+            raw_strings = self.view.find_by_selector(
+                "meta.string | string.quoted | markup.raw.inline.markdown"
+            )
 
             selector = "meta.string"
             for _ in range(5):
@@ -40,6 +42,8 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
                         i
                         for i in range(len(scopes))
                         if "punctuation.definition.string.begin" not in scopes[i][1]
+                        and "punctuation.definition.raw.begin.markdown"
+                        not in scopes[i][1]
                     ),
                     None,
                 )
@@ -48,6 +52,8 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
                         i
                         for i in range(len(scopes) - 1, -1, -1)
                         if "punctuation.definition.string.end" not in scopes[i][1]
+                        and "punctuation.definition.raw.end.markdown"
+                        not in scopes[i][1]
                     ),
                     None,
                 )
