@@ -204,7 +204,7 @@ class HistoryItem:
         # open_file
         self.view = view
         self.change_id = view.change_id()
-        self.file_name = self.view.file_name()
+        self.file_name = self.view.file_name() or ""
         self.window = self.view.window()
         self.position = view.sel()[0]
         self.group = self.view.sheet().group()
