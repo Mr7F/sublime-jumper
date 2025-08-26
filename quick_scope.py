@@ -41,6 +41,13 @@ class JumperQuickScopeCommand(sublime_plugin.TextCommand):
                     self.view, selection, extend, included
                 )
 
+        self.view.window().run_command(
+            # Add the new selection in the Jump Back / Next history
+            # (if we execute the same command, it throttles it to 1 second)
+            "add_jump_record",
+            {"selection": [s.to_tuple() for s in self.view.sel()]},
+        )
+
     def on_cancel(self):
         self.view.window().run_command("hide_panel", {"cancel": True})
         _input_panel_opened.pop(self.view.id(), None)

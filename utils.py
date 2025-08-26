@@ -137,6 +137,13 @@ def select_next_region(view, regions, direction="next", extend=False):
         view.show(to_show)
         view.show(sublime.Region(to_show.a, to_show.a))
 
+        view.window().run_command(
+            # Add the new selection in the Jump Back / Next history
+            # (if we execute the same command, it throttles it to 1 second)
+            "add_jump_record",
+            {"selection": [s.to_tuple() for s in view.sel()]},
+        )
+
 
 def get_word_separators(view):
     word_separators = view.settings().get("word_separators")

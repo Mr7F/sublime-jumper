@@ -34,6 +34,13 @@ class MultiCursorAddCommand(sublime_plugin.TextCommand):
         self.view.sel().add(cursor)
         self.view.show(cursor)
 
+        self.view.window().run_command(
+            # Add the new selection in the Jump Back / Next history
+            # (if we execute the same command, it throttles it to 1 second)
+            "add_jump_record",
+            {"selection": [s.to_tuple() for s in self.view.sel()]},
+        )
+
         if len(self.view.sel()) >= 1:
             self.view.add_regions(
                 "jumper-select-next-same-selection",

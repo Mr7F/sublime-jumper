@@ -28,6 +28,13 @@ def _set_cursor(view, position):
     sel.add(region)
     view.show(region, animate=False)
 
+    view.window().run_command(
+        # Add the new selection in the Jump Back / Next history
+        # (if we execute the same command, it throttles it to 1 second)
+        "add_jump_record",
+        {"selection": [s.to_tuple() for s in view.sel()]},
+    )
+
 
 class JumperPreviousModificationPanelCommand(sublime_plugin.TextCommand):
     # Show a panel with all the history
