@@ -29,12 +29,15 @@ class TestDeferrable(DeferrableTestCase):
         sublime.active_window().focus_view(self.view_saved)
 
         yield lambda: not self.view_saved.is_loading()
+        yield 25
         self.view_saved.sel().clear()
         self.view_saved.sel().add(sublime.Region(3, 3))
         yield from self._insert("1", self.view_saved)
 
+        sublime.active_window().focus_view(self.view_closed)
         self.view_closed.sel().clear()
         self.view_closed.sel().add(sublime.Region(5, 5))
+        yield 25
         yield from self._insert("2", self.view_closed)
         yield from self._insert("3", self.view_closed)
         yield from self._insert("4", self.view_closed)
@@ -44,6 +47,7 @@ class TestDeferrable(DeferrableTestCase):
 
         sublime.active_window().focus_view(self.view_tmp)
         yield lambda: not self.view_tmp.is_loading()
+        yield 25
         yield from self._insert("5", self.view_tmp)
         yield from self._insert("6", self.view_tmp)
         yield from self._insert("7", self.view_tmp)
