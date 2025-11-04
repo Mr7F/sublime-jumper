@@ -14,20 +14,21 @@ class SelectNextSameSelection(sublime_plugin.TextCommand):
             # The focus is in the search bar
             view = view.window().active_view()
 
-        sel = SelectNextSameSelectionListener.get_main_cursor(view)
+        sel = SelectNextSameSelectionListener.get_main_cursors(view)
+        print('sel', sel)
         if sel is None:
             _selection_mode[view] = "text"  # Cursor moved
-            sel = max(view.sel()) if direction == "next" else min(view.sel())
+            sel = list(view.sel())
 
-        if sel.a == sel.b:
+        if all(s.a == s.b for s in sel):
             _selection_mode[view] = "word"
             view.run_command(
                 "multi_cursor_add",
-                {"cursor": view.word(sel.a).to_tuple(), "scope": "region.cyanish"},
+                {"cursors": [view.word(s.a).to_tuple() for s in sel], "scope": "region.cyanish"},
             )
             return
 
-        text = view.substr(sel)
+
         flags = sublime.WRAP
         color = "region.greenish"
         if direction != "next":
@@ -38,17 +39,23 @@ class SelectNextSameSelection(sublime_plugin.TextCommand):
         else:
             flags |= sublime.LITERAL
 
-        result = view.find(
-            text,
-            sel.end() if direction == "next" else sel.begin(),
-            flags,
-        )
+        result = []
+        for s in sel:
+            r = view.find(
+                view.substr(s),
+                s.end() if direction == "next" else s.begin(),
+                flags,
+            )
+            if r:
+                result.append(r)
+
         if not result:
             return
         if not keep_selection:
-            view.sel().subtract(sel)
+            for s in sel:
+                view.sel().subtract(s)
 
         view.run_command(
             "multi_cursor_add",
-            {"cursor": result.to_tuple(), "scope": color},
+            {"cursors": [r.to_tuple() for r in result], "scope": color},
         )

@@ -24,6 +24,35 @@ class TestDeferrable(DeferrableTestCase):
         self.view.set_scratch(True)
         self.view.assign_syntax("Python.sublime-syntax")
 
+    def test_many_selection(self):
+        yield from self._run_cmd("insert", {"characters": _code})
+
+        self.view.sel().clear()
+        self.view.sel().add(sublime.Region(20, 24))
+        self.view.sel().add(sublime.Region(36, 40))
+        yield from self._run_cmd(
+            "select_next_same_selection",
+            {"keep_selection": False, "direction": "previous"},
+        )
+        self.assertEqual(len(self.view.sel()), 2)
+        self.assertEqual(self.view.sel()[0].to_tuple(), (6, 10))
+        self.assertEqual(self.view.sel()[1].to_tuple(), (28, 32))
+
+        yield from self._run_cmd("select_next_same_selection", {"keep_selection": True})
+        self.assertEqual(len(self.view.sel()), 4)
+        self.assertEqual(self.view.sel()[0].to_tuple(), (6, 10))
+        self.assertEqual(self.view.sel()[1].to_tuple(), (20, 24))
+        self.assertEqual(self.view.sel()[2].to_tuple(), (28, 32))
+        self.assertEqual(self.view.sel()[3].to_tuple(), (36, 40))
+
+        yield from self._run_cmd(
+            "select_next_same_selection", {"keep_selection": False}
+        )
+        self.assertEqual(len(self.view.sel()), 3)
+        self.assertEqual(self.view.sel()[0].to_tuple(), (6, 10))
+        self.assertEqual(self.view.sel()[1].to_tuple(), (28, 32))
+        self.assertEqual(self.view.sel()[2].to_tuple(), (44, 48))
+
     def test_select_bracket(self):
         yield from self._run_cmd("insert", {"characters": _code})
 
