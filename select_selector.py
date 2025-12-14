@@ -79,6 +79,11 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
                 content = self.view.substr(reg)
                 l = len(content) - len(content.lstrip())
                 r = len(content) - len(content.rstrip())
-                strings.append(sublime.Region(reg.a + l, reg.b - r) if r or l else reg)
+                if reg.a + l < reg.b - r:
+                    strings.append(sublime.Region(reg.a + l, reg.b - r))
+                else:
+                    # empty after trim, so we move the cursor at the beginning
+                    strings.append(sublime.Region(reg.a, reg.a))
+
 
         select_next_region(self.view, strings, direction, extend)
