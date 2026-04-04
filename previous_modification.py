@@ -182,6 +182,10 @@ class JumperPreviousModificationListener(sublime_plugin.ViewEventListener):
     def on_modified_async(self):
         global _history, _history_position, _views_to_close, _position_start
 
+        if self.view.element():
+            # don't jump in "find in files" page, etc
+            return
+
         if self.view in _views_to_close:
             _views_to_close.remove(self.view)
 
