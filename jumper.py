@@ -7,7 +7,6 @@ from .create_label import make_prefix_free_labels
 from .utils import (
     JumperLabel,
     clean_charset,
-    get_element_html_positions,
     get_next_element,
     setting,
 )
@@ -269,9 +268,10 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
         line_height = int(
             self.view.line_height() + line_padding_bottom + line_padding_top
         )
-        html_positions = get_element_html_positions(
+        html_positions = self._get_element_html_positions(
             text,
             [p[1] - offset_region for p in positions],
+            visible_region,
         )
 
         style = self.view.style()
@@ -392,6 +392,57 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
 
         sheets_per_view[self.view.id()].set_contents(content)
 
+    def _get_element_html_positions(self, html, indexes, visible_region):
+        """Map source-text offsets to exported HTML positions."""
+        wanted = set(indexes)
+        if not wanted:
+            return {}
+
+        found = {}
+        column = 0
+        source = self.view.substr(visible_region)
+        tab_size = max(int(self.view.settings().get("tab_size", 4)), 1)
+
+        def text_elements():
+            index = 0
+            while index < len(html):
+                size, text_size = get_next_element(html, index)
+                if text_size:
+                    yield index, size
+                index += size
+
+        elements = iter(text_elements())
+
+        for source_index, character in enumerate(source):
+            element = next(elements, None)
+            if element is None:
+                break
+
+            start, size = element
+            if source_index in wanted:
+                found[source_index] = (start, size)
+                if len(found) == len(wanted):
+                    return found
+
+            if character == "\n":
+                exported_width = 1
+                column = 0
+            elif character == "\t":
+                exported_width = tab_size - column % tab_size
+                column += exported_width
+            else:
+                exported_width = 1
+                column += 1
+
+            # The first exported element was consumed above. Sublime exports a
+            # tab as one element per visual column, all representing one buffer
+            # character, so skip the remaining elements of that tab.
+            for _ in range(exported_width - 1):
+                if next(elements, None) is None:
+                    return found
+
+        return found
+
     def _split_wrapped_lines(self, text, visible_region):
         """Break the lines of the exported HTML at the same places as the editor.
 
@@ -414,9 +465,10 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
         offset_region = visible_region.a
         em_width = self.view.em_width()
 
-        wrap_positions = get_element_html_positions(
+        wrap_positions = self._get_element_html_positions(
             text,
             [p - offset_region for p in wrap_points],
+            visible_region,
         )
 
         for offset, (start, _) in sorted(wrap_positions.items(), reverse=True):
@@ -546,4 +598,6 @@ class JumperInputListener(sublime_plugin.EventListener):
 
 def make_element(tag, content, style, is_content_html=False):
     style = ";".join(f"{name}: {value}" for name, value in style.items())
-    return f'<{tag} style="{style}">{content if is_content_html else html.escape(content)}</{tag}>'
+    style = html.escape(style, quote=True)
+    content = content if is_content_html else html.escape(content)
+    return f'<{tag} style="{style}">{content}</{tag}>'

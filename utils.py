@@ -23,40 +23,6 @@ def get_next_element(html, index):
     return 1, 1
 
 
-def get_element_html_positions(html, indexes):
-    # Return the index in the HTML code of the given text
-    indexes = sorted(indexes)
-    text_index = 0
-    i = 0
-
-    found = {}
-
-    for index in indexes:
-        while True:
-            if i >= len(html):
-                return found
-
-            html_size, text_size = get_next_element(html, i)
-
-            if text_index == index and text_size:
-                found[index] = (i, html_size)
-                i += html_size
-                text_index += text_size
-                break
-
-            if text_index > index:
-                break
-
-            i += html_size
-            text_index += text_size
-
-    return found
-
-
-def get_element_html_position(html, index):
-    return get_element_html_positions(html, [index])[index]
-
-
 class JumperLabel:
     def __init__(self, region, character, label_region=None):
         """Represent a label in the editor where we can jump to.
