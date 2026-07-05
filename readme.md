@@ -1,19 +1,12 @@
 # Sublime - Jumper
 ## Go To Anywhere
-Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMotion) and [Ace Jump](https://github.com/acejump/AceJump) it's also possible to press a shortcut,
-followed by a key, to highlight all matching character with a small label. Pressing the label jump to that position.
-In that mode, you can press
-- "`space`" then the label to select everything between the cursor and the target label excluded (the color will change)
-- "`tab`" then the label to select everything between the cursor and the target label included (the color will change)
-- "`|`" to keep the current selection and add a new cursor to the target
+Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMotion) and [Ace Jump](https://github.com/acejump/AceJump), press a shortcut to label every match of a regex visible on the screen. Typing the label jumps to that position.
 
-Example:
-- `<shortcut> + a + x`: jump to the "a" labelled "x"
-- `<shortcut> + a + " " + x`: select between the cursor and the "a" labelled "x" ("a" excluded)
-- `<shortcut> + a + "tab" + x`: select between the cursor and the "a" labelled "x" ("a" included)
-- `<shortcut> + " " + x`: jump to the beginning of the non-empty line labelled "x"
-
-If the charset is not big enough, you can press many keys to jump where you want.
+While the labels are shown, you can switch mode:
+- "`enter`" then the label: select everything between the cursor and the target, target included (the color will change)
+- "`tab`" then the label: select everything between the cursor and the target, target excluded (the color will change)
+- "`|`" then the label: keep the current selection and add a new cursor at the target
+- pressing the same key a second time (or backspace on an empty input) goes back to "jump" mode
 
 <p align="center">
   <img src="img/demo_go_to_anywhere.gif">
@@ -21,71 +14,49 @@ If the charset is not big enough, you can press many keys to jump where you want
 
 ```json
 {
-    "keys": ["find", "enter", "<character>"],
-    "command": "jumper_go_to_anywhere",
+    // Label all the words on the screen
+    "keys": ["shift+find"],
+    "command": "jumper",
+    "args": {"regex": "\\w+"}
 },
 {
-    // Needed if we need to press shift for the target
-    "keys": ["find", "enter", "shift", "<character>"],
-    "command": "jumper_go_to_anywhere",
+    // Label only the words of the current line
+    // (press it a second time to label the whole screen)
+    "keys": ["find"],
+    "command": "jumper",
+    "args": {"regex": "\\w+", "current_line": true}
 },
-{   // Jump to end of non-empty line
-    "keys": ["find", "enter", "tab"],
-    "command": "jumper_go_to_anywhere",
-    "args": {"character": "\t"},
-},
-{   // Jump to start of non-empty line
-    "keys": ["find", "enter", "space"],
-    "command": "jumper_go_to_anywhere",
-    "args": {"character": " "},
-},
-````
+```
 
+The `extend` argument accepts the mode to start with: `1` select until the target excluded, `2` select until the target included, `3` add a new cursor at the target.
 
-The labels are **deterministic**, that way you can build muscle memory when you know how many matches are between the cursor and your target. You can change the charset to use your home row, the characters used:
-- First match after the cursor: first letter of the charset
-- First match before the cursor: second letter of the charset
-- Second match after the cursor: third letter of the charset
-- Second match before the cursor: fourth letter of the charset
-- ...
+The labels are **derived from the matched text**: a match starting with a unique letter is labelled by that letter, so typing the first letter of your target usually jumps there directly. When several matches start with the same letter, longer labels are generated (preferring the following characters of the matched text).
+
+You can change the charset used for the labels (the preferred characters first). Whitespace, "`enter`", "`tab`" and "`|`" can not be used, they are reserved to switch mode:
 
 ```json
 {
-    "jumper_go_to_anywhere_charset": "tnseriaogmdhc,x.plfuwyvkbj:z123456789TNSERIAOGMDHCXPLFUWYVKBJ{}@%$&!#|^'-_=/;()"
+    "jumper_charset": "ntesiroamglpufywjbhd,cxkv:z"
 }
 ```
 
-You can type
-- space to jump at the beginning of non-empty line
-- tab to jump at the end of non-empty line
+The jump works when many files are open, the labels stay unique across all the views. But the "select" and "add cursor" modes only show the labels of the current view (because we can not extend a selection between 2 files).
 
-The jump work when many files are open (but not the extend, because we can not edit 2 files at the same time).
+Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope), the characters used by the labels of the current line can be underlined, so you know what to type before even starting the command. Set `jumper_quick_scope_regex` to the same regex as your `current_line: true` keybinding (or to `""` to disable the highlight):
 
-With `jumper_go_to_anywhere_case_sensitive`, you can make the search case insensitive, and the labels will also be lower case.
-
-With `jumper_go_to_anywhere_word_mode`, you can only search at the beginning of the words (reducing the number of labels) and the selection will select the word and not the character.
-
-Searching for quotes ``` `'" ``` will matches any quotes (same for labels).
-
-You can be creative, it supports regex, for example, this is the same as the `HopWord` command from [hop.nvim](https://github.com/smoka7/hop.nvim)
 ```json
-{
-    "keys": ["find"],
-    "command": "jumper_go_to_anywhere",
-    "args": {
-        "is_regex": true,
-        "character": "(?<=\\W)\\w"
-    },
-},
+{"jumper_quick_scope_regex": "\\w+"}
 ```
 
-When the label has more than one character (because a lot of text matched), you will see border around the label. The number of border is the number of time you need to press `.` before pressing the label to jump there. While you press `.`, the borders will be removed to show the remaining number of key press. If you don't like that, you can disable it with `jumper_go_to_anywhere_no_borders_label`.
+With `jumper_escalate_line_to_screen`, pressing the "current line" shortcut a second time re-executes the command on the whole screen instead of only the current line.
+
+With `jumper_case_sensitive`, you can make the search and the labels case sensitive (insensitive by default `false`).
+
+When a label has more characters than the matched text can display, borders are shown around the last visible character. They will disappear while you type the label.
 
 <p align="center">
   <img src="img/demo_borders.gif">
 </p>
-
-You can set the setting `jumper_go_to_anywhere_search_length`, if you want to type more than one character before typing the label. Set it to `2` to make the plugin work like [leap.vim](https://github.com/ggandor/leap.nvim)
 
 
 ## Technical
@@ -96,56 +67,6 @@ You can check the branch `master-all-labels-methods` to see all possible way to 
 - buffer: we will change the buffer, but the "redo" history can not be cleaned
 - popup: we show a popup, but you will see a shadow and you can not jump to the first line
 - sheet: the default implementation, only drawback is that when you are in "label typing" mode, you can not select text with the mousse
-
-## Quick Scope
-Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope), each words get labelled by one letter inside of it,
-pressing a shortcut and then that letter will jump at the **start** of the word (the label is case insensitive to go faster).
-
-<p align="center">
-  <img src="img/demo_quick_scope_word_mode.gif">
-</p>
-
-
-```
-This is a test
-|    |  |  |
-
-```
-- `<shortcut> t`: jump to **start** of "this"
-- `<shortcut> i`: jump to **start** of "is"
-- `<shortcut> e`: jump to **start** of "test"
-
-For the other lines, it will show one character per line to jump at the **start** of that line.
-
-To enable the highlight, set the settings `jumper_quick_scope` to true. Or, if you want to enable the feature only for the current line, set it to `"line"`.
-
-```json
-{"jumper_quick_scope": true}
-{"jumper_quick_scope": "line"}
-```
-
-You can also select until the matching word (that word included or not).
-
-Like for "Go To Anywhere", you can press "space" or "tab" before pressing the label to select (included or not) until the match.
-
-```json
-{
-    "keys": ["find", "<character>"],
-    "command": "jumper_quick_scope"
-},
-{
-    "keys": ["find", "tab"],
-    "command": "jumper_quick_scope",
-    "args": {"character": "\t"}
-},
-{
-    "keys": ["shift+find", "<character>"],
-    "command": "jumper_quick_scope",
-    "args": {"extend": true}
-}
-```
-
-A cool keybind is to use a shortcut for "Quick Scope", and that "shortcut, enter" for "Go To Anywhere" (since "enter" is not a valid quick scope search argument).
 
 ## Select Next Selection Match
 The command `select_next_same_selection` will select the next / previous text matching the current selection
@@ -345,7 +266,6 @@ If it open a new sheet, it will be closed automatically if no modification are m
 Run the command `jumper_previous_modification_panel` to open a panel with the history.
 
 # TODO
-- Remove `create_keybind.py` and add keybind in the readme once https://github.com/sublimehq/sublime_text/issues/6650 is fixed
 - Find a way to add letter as row number to jump faster, once https://github.com/sublimehq/sublime_text/issues/6654 is done
 - "Go To Anywhere", when clicking on a tab, the input panel should close
 - "Go To Anywhere", read `word_wrap` settings (set to "auto"), seems to be `&nbsp;`, but a bit tricky to split the lines at the same place (it change depending on the language)

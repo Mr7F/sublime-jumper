@@ -1,100 +1,64 @@
 [
-    // // Quick Scope
+    {
+        // select until the matched regex included
+        "keys": [
+            "enter"
+        ],
+        "command": "jumper_input_set_mode",
+        "args": {
+            "extend": 2
+        },
+        "context": [
+            {
+                "key": "setting.jumper_input",
+                "operator": "equal",
+                "operand": true
+            }
+        ]
+    },
+    {
+        // select until the matched regex excluded
+        "keys": [
+            "tab"
+        ],
+        "command": "jumper_input_set_mode",
+        "args": {
+            "extend": 1
+        },
+        "context": [
+            {
+                "key": "setting.jumper_input",
+                "operator": "equal",
+                "operand": true
+            }
+        ]
+    },
+    {
+        // add a new cursor at the matched regex
+        "keys": [
+            "|"
+        ],
+        "command": "jumper_input_set_mode",
+        "args": {
+            "extend": 3
+        },
+        "context": [
+            {
+                "key": "setting.jumper_input",
+                "operator": "equal",
+                "operand": true
+            }
+        ]
+    },
+    // // Jumper
     // {
     //     "keys": [
-    //         "alt+i",
-    //         "<character>",
+    //         "find",
     //     ],
-    //     "command": "jumper_quick_scope"
-    // },
-    // {
-    //     "keys": [
-    //         "alt+i",
-    //         "shift", // Needed when we press "shift" for a character
-    //         "<character>",
-    //     ],
-    //     "command": "jumper_quick_scope"
-    // },
-    // {
-    //     "keys": [
-    //         "alt+i",
-    //         "tab",
-    //     ],
-    //     "command": "jumper_quick_scope",
+    //     "command": "jumper",
     //     "args": {
-    //         "character": "\t"
-    //     }
-    // },
-    // {
-    //     "keys": [
-    //         "alt+i",
-    //         "shift", // Needed when we press "shift" for a character
-    //         "tab",
-    //     ],
-    //     "command": "jumper_quick_scope",
-    //     "args": {
-    //         "character": "\t"
-    //     }
-    // },
-    // {
-    //     "keys": [
-    //         "shift+alt+i",
-    //         "<character>",
-    //     ],
-    //     "command": "jumper_quick_scope",
-    //     "args": {
-    //         "extend": true
-    //     }
-    // },
-    // {
-    //     "keys": [
-    //         "shift+alt+i",
-    //         "shift", // Needed when we press "shift" for a character
-    //         "<character>",
-    //     ],
-    //     "command": "jumper_quick_scope",
-    //     "args": {
-    //         "extend": true
-    //     }
-    // },
-    // // Go To Anywhere
-    // {
-    //     "keys": [
-    //         "alt+i",
-    //         "enter",
-    //         "<character>"
-    //     ],
-    //     "command": "jumper_go_to_anywhere",
-    // },
-    // {
-    //     "keys": [
-    //         "alt+i",
-    //         "enter",
-    //         "shift", // Needed when we press "shift" for a character
-    //         "<character>"
-    //     ],
-    //     "command": "jumper_go_to_anywhere",
-    // },
-    // {
-    //     "keys": [
-    //         "alt+i",
-    //         "enter",
-    //         "tab"
-    //     ],
-    //     "command": "jumper_go_to_anywhere",
-    //     "args": {
-    //         "character": "\t"
-    //     },
-    // },
-    // {
-    //     "keys": [
-    //         "alt+i",
-    //         "enter",
-    //         "space"
-    //     ],
-    //     "command": "jumper_go_to_anywhere",
-    //     "args": {
-    //         "character": " "
+    //         "regex": "\\w+",
+    //         "current_line": true
     //     },
     // },
     // // Go To Modification

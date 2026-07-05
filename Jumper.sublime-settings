@@ -1,15 +1,13 @@
 {
-    // The "Quick Scope" labels are shown only on the current line
-    // - true: jump on words in the current line, or at the start of other lines
-    // - "line": jump only on words in the current line
-    // - false: disabled
-    "jumper_quick_scope": false,
+    // The "Jumper" labels are shown only on the current line
+    // contains the regex used to split by word, leave empty to not show the labels
+    "jumper_quick_scope_regex": "\\w+",
     // Characters use for the label (closed labels first)
-    "jumper_go_to_anywhere_charset": "ntesiroamglpufywjbhd,cxkv:z",
+    "jumper_charset": "ntesiroamglpufywjbhd,cxkv:z",
     // The "Go To Anywhere" command is case-sensitive
-    "jumper_go_to_anywhere_case_sensitive": false,
-    // The "Go To Anywhere" command only goes to the start of the words
-    "jumper_go_to_anywhere_word_mode": true,
-    // Number of character to type in "Go To Anywhere" before pressing the label
-    "jumper_go_to_anywhere_search_length": 1,
+    "jumper_case_sensitive": false,
+    // When jumping in the current line, with `"current_line": true`,
+    // if true when executing a second time the keybind it will re-execute the command
+    // without that argument
+    "jumper_escalate_line_to_screen": true,
 }

@@ -1,22 +1,25 @@
 import html
-import re
 
 import sublime
 import sublime_plugin
 
+from .create_label import make_prefix_free_labels
 from .utils import (
     JumperLabel,
+    clean_charset,
     get_element_html_positions,
-    get_word_separators,
+    get_next_element,
     setting,
 )
 
 sheets_per_view = {}
 active_view = {}
 views = {}
+active_jumper_input = {}
+active_jumper_by_window = {}
 
 
-class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
+class JumperCommand(sublime_plugin.TextCommand):
     """Highlight all the characters visible on the screen, with a letter for each, press that letter to jump to the position.
 
     Similar package:
@@ -25,134 +28,131 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
     > https://github.com/jfcherng-sublime/ST-AceJump-Chinese
     """
 
-    def run(self, edit, character, extend=False, is_regex=False):
-        global views, sheets_per_view, active_view
+    def run(self, edit, regex, extend=False, current_line=False):
+        if self.restart_without_current_line(regex, extend, current_line):
+            return
 
         self.extend = int(extend)
-        self.is_regex = is_regex
-        self.word_mode = setting("jumper_go_to_anywhere_word_mode", self.view)
+        self.search_regex = regex
+        self.current_line = current_line
 
-        views = {v: v.visible_region() for v in self._active_views if v is not None}
-        active_view[self.view.window()] = self.view.window().active_view()
+        self.case_sensitive = setting("jumper_case_sensitive", self.view)
+        self.charset = clean_charset(
+            setting("jumper_charset", self.view),
+            self.case_sensitive,
+        )
 
-        for sheet in sheets_per_view.values():
+        window = self.view.window()
+        active_jumper_by_window[window.id()] = self
+
+        views.clear()
+        views.update(
+            {v: v.visible_region() for v in self._active_views if v is not None}
+        )
+
+        active_view[window] = window.active_view()
+
+        for sheet in list(sheets_per_view.values()):
             sheet.close()
-        sheets_per_view = {}
 
-        self.edit = edit
-        self.charset = setting("jumper_go_to_anywhere_charset", self.view)
-        self.case_sensitive = setting("jumper_go_to_anywhere_case_sensitive", self.view)
-
-        self.charset = re.sub(r"[\s\t|]", "", self.charset)  # Reserved for commands
-
-        if not self.case_sensitive:
-            self.charset = self.charset.lower()
-
-        self.jump_next_c = "."
-
-        # Remove redundant characters (and `.` is used when we need morel labels)
-        cleaned_charset = ""
-        for c in self.charset:
-            if c not in cleaned_charset and c != self.jump_next_c:
-                cleaned_charset += c
-        self.charset = list(cleaned_charset)
-
-        # Show many jumps characters if needed
-        base_charset = self.charset.copy()
-        for i in range(1, 5):
-            self.charset.extend([i * self.jump_next_c + c for c in base_charset])
-
-        assert len(set(self.charset)) == len(self.charset)
+        sheets_per_view.clear()
 
         self.exit = False
-        self._find_match_views(character)
+        self._init_labels()
+        self._show_labels()
 
-        self.view.window().show_input_panel(
+        input_view = window.show_input_panel(
             "Select to" if extend else "Jump to",
-            character + (" " if self.extend else ""),
+            "",
             self.on_cancel,
             self.on_change,
             self.on_cancel,
         )
 
-    def _find_match(self, char, view, charset) -> "dict[str, JumperLabel]":
-        if not char.strip() and len(char) > 2:
-            return {}
+        input_view.settings().set("jumper_input", True)
+        active_jumper_input[input_view.id()] = self
+        self.input_view = input_view
+
+    def restart_without_current_line(self, regex, extend, current_line):
+        """Re-running the command while it shows the current line escalates it to the whole screen."""
+        if not current_line:
+            return False
+
+        previous = active_jumper_by_window.get(self.view.window().id())
+
+        if (
+            previous is None
+            or not previous.current_line
+            or not setting("jumper_escalate_line_to_screen", previous.view, False)
+        ):
+            return False
+
+        target_view = previous.view
+
+        previous.on_cancel(restore_focus=False)
+
+        sublime.set_timeout(
+            lambda: target_view.run_command(
+                "jumper",
+                {
+                    "regex": regex,
+                    "extend": extend,
+                    "current_line": False,
+                },
+            ),
+            0,
+        )
+
+        return True
+
+    def _find_match(self, view) -> "list[sublime.Region]":
         visible_region = views[view]
-        start_cursor = (
-            view.sel()[0].begin()
+
+        cursor = (
+            view.sel()[0].b
             if view.sel()
             else (visible_region.a + visible_region.b) // 2
         )
-        if char == " ":
-            matches = view.find_all(r"^\s*[^\s]")
-            matches = [sublime.Region(m.b - 1, m.b - 1) for m in matches]
-        elif char == "\t":
-            matches = view.find_all(r"[^\s]$")
-            matches = [sublime.Region(m.b, m.b) for m in matches]
-        elif char in "'\"":
-            # Find any quotes types
-            matches = view.find_all(r"['\"`]")
-        else:
-            flags = 0
-            if not self.case_sensitive:
-                flags |= sublime.IGNORECASE
-            if not self.is_regex:
-                char = re.escape(char)
-            if self.word_mode:
-                seps = get_word_separators(view) + " \n"
-                if not char.startswith(tuple(seps)):
-                    char = f"(?<=[{re.escape(seps)}])({char})[^{re.escape(seps)}]*"
 
-            matches = view.find_all(char, flags, within=visible_region)
+        search_region = (
+            view.line(cursor).intersection(visible_region)
+            if self.current_line
+            else visible_region
+        )
 
-        matches = sorted(matches, key=lambda x: abs(x.begin() - start_cursor))
-        matches = matches[: len(charset)]
-        # Make labels deterministic
-        before = [m for m in matches if m.begin() < start_cursor]
-        if view != self.view:
-            # view not having the focus, do not hide label for current position
-            start_cursor -= 1
-        after = [m for m in matches if m.begin() > start_cursor]
-        positions = {}
-        for i, region in enumerate(after):
-            if i >= len(charset) // 2:
-                break
-            c = charset[2 * i]
-            positions[c] = JumperLabel(region, c)
+        flags = 0 if self.case_sensitive else sublime.IGNORECASE
+        matches = view.find_all(self.search_regex, flags, within=search_region)
 
-        for i, region in enumerate(before):
-            if i >= len(charset) // 2:
-                break
-            c = charset[2 * i + 1]
-            positions[c] = JumperLabel(region, c)
+        matches = sorted(matches, key=lambda x: abs(x.begin() - cursor))
+        # More matches than two-characters labels would be unusable anyway
+        return matches[: len(self.charset) ** 2]
 
-        return positions
+    def _init_labels(self):
+        """Create the labels for the current regex, unique across all the views."""
+        matches = [
+            (view, region) for view in views for region in self._find_match(view)
+        ]
 
-    def _find_match_views(self, char, label_search=""):
-        """Find the matching chars in all active view and add labels."""
-        if char != getattr(self, "char", None):
-            self.positions: "dict[View, dict[str, JumperLabel]]" = {}
-            self.char = char
-            if len(char) >= self.search_length:
-                charset = self.charset.copy()
-                for view in views:
-                    self.positions[view] = self._find_match(char, view, charset)
-                    charset = [c for c in charset if c not in self.positions[view]]
-            else:
-                # When `jumper_go_to_anywhere_search_length` > 1
-                # Then we want to show the HTML sheet after the first character pressed
-                for view in views:
-                    self.positions[view] = {}
+        labels = make_prefix_free_labels(
+            texts=[view.substr(region) for view, region in matches],
+            alphabet=self.charset,
+            case_sensitive=self.case_sensitive,
+        )
 
-        self._show_labels(label_search)
-
-    @property
-    def search_length(self):
-        return setting("jumper_go_to_anywhere_search_length", self.view, 1)
+        self.positions: "dict[View, dict[str, JumperLabel]]" = {
+            view: {} for view in views
+        }
+        for i, (view, region) in enumerate(matches):
+            label = labels.get(i)
+            if label is not None:
+                self.positions[view][label] = JumperLabel(region, label)
 
     def _show_labels(self, label_search=""):
         for view, values in self.positions.items():
+            if self.extend and view != self.view:
+                # The "extend" modes cannot work cross-view
+                values = {}
+
             view.run_command(
                 "select_char_selection_add_labels",
                 {
@@ -167,7 +167,7 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 
     @property
     def _active_views(self):
-        if self.extend:
+        if self.extend or self.current_line:
             return [self.view]
         views = [
             self.view.window().active_view_in_group(group)
@@ -176,18 +176,15 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
         return sorted(views, key=lambda v: v != self.view)
 
     def on_change(self, value):
-        char, search_label = value[: self.search_length], value[self.search_length :]
-
-        cmd = ""
-        if search_label and search_label[0] in " \t|":
-            cmd = search_label[0]
-            search_label = search_label[1:]
+        label_search = value
 
         target_view, jump = next(
             (
-                (view, values[search_label])
+                (view, values[label_search])
                 for view, values in self.positions.items()
-                if search_label in values
+                if label_search in values
+                # The "extend" modes cannot work cross-view
+                and (not self.extend or view == self.view)
             ),
             (None, None),
         )
@@ -195,25 +192,8 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
         if jump is not None:
             self.on_cancel()
 
-        # Switch selection mode
-        if cmd == " " and not search_label:
-            self.extend = 1
-            self._find_match_views(char, search_label)
-            return
-
-        if cmd == "\t" and not search_label:
-            self.extend = 2
-            self._find_match_views(char, search_label)
-            return
-
-        if cmd == "|" and not search_label:
-            self.extend = 3
-            self._find_match_views(char, search_label)
-            return
-
-        if not search_label:
-            self.extend = 0
-            self._find_match_views(char, search_label)
+        if not label_search:
+            self._show_labels(label_search)
             return
 
         if jump is not None:
@@ -225,24 +205,50 @@ class JumperGoToAnywhereCommand(sublime_plugin.TextCommand):
 
             if self.extend != 3:
                 target_view.sel().clear()
+
             for sel in selection:
-                jump.jump_to(target_view, sel, self.extend in (1, 2), self.extend == 2)
+                jump.jump_to(
+                    target_view,
+                    sel,
+                    self.extend in (1, 2),
+                    self.extend == 2,
+                )
 
             target_view.show(target_view.sel()[0])
-
         else:
-            self._find_match_views(char, search_label)
+            self._show_labels(label_search)
 
-    def on_cancel(self, *args, **kwargs):
+    def on_cancel(self, *args, restore_focus=True, **kwargs):
         if self.exit:
             return
+
         self.exit = True
 
-        for view in views:
+        window = self.view.window()
+        window_id = window.id()
+
+        if active_jumper_by_window.get(window_id) is self:
+            active_jumper_by_window.pop(window_id, None)
+
+        if hasattr(self, "input_view"):
+            active_jumper_input.pop(self.input_view.id(), None)
+            # The input panel view is reused by other panels (eg rename file),
+            # the keybindings must not stay active there
+            self.input_view.settings().erase("jumper_input")
+
+        for view in list(views):
             view.run_command("select_char_selection_remove_labels")
 
-        self.view.window().run_command("hide_panel", {"cancel": True})
-        self.view.window().focus_view(active_view[self.view.window()])
+        window.run_command("hide_panel", {"cancel": True})
+
+        view_to_focus = active_view.pop(window, None)
+
+        if restore_focus and view_to_focus is not None:
+            window.focus_view(view_to_focus)
+
+    def reset_mode(self):
+        self.extend = 0
+        self._show_labels("")
 
 
 class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
@@ -288,43 +294,48 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 "border-radius": "5px",
             }
 
-            start, size = html_position
+            start, _ = html_position
 
-            if "<br" in text[start : start + size]:
-                size = 0  # Jump to end of line
+            visible_label_max_width = max(b - a, 1)
+            visible_label, borders = self.visible_label_for(
+                c,
+                label_search,
+                visible_label_max_width,
+            )
 
-            if setting("jumper_go_to_anywhere_no_borders_label", self.view):
-                label = c[len(label_search) : len(label_search) + 1] or c[-1]
+            # HTML length of the text replaced by the label. Tags are never
+            # replaced (eg `<br>` when jumping to the end of the line), the
+            # label is only inserted before them.
+            consumed = 0
+            covered = 0
+            while covered < len(visible_label) and start + consumed < len(text):
+                if text[start + consumed] == "<":
+                    break
+                html_size, text_size = get_next_element(text, start + consumed)
+                consumed += html_size
+                covered += text_size
 
-            else:
-                # Show border to specify the number of time we need to press the "multi-label" character
-                label = c[-1]
-                borders = next(
-                    (i for i, (a, b) in enumerate(zip(label_search, c)) if a != b),
-                    len(c) - len(label_search),
-                )
-                borders -= 1
-
-                if borders >= 1:
-                    add_style["background-color"] = ""
-                    add_style["border-radius"] = "0px"
-                    add_style["padding-bottom"] = "-1px"
-                    add_style["border-bottom"] = f"1px solid {color}"
-                if borders >= 2:
-                    add_style["padding-right"] = "-1px"
-                    add_style["border-right"] = f"1px solid {color}"
-                if borders >= 3:
-                    add_style["padding-top"] = "-1px"
-                    add_style["border-top"] = f"1px solid {color}"
-                if borders >= 4:
-                    add_style["padding-left"] = "-1px"
-                    add_style["border-left"] = f"1px solid {color}"
+            borders_style = {}
+            if borders >= 1:
+                borders_style["background-color"] = ""
+                borders_style["border-radius"] = "0px"
+                borders_style["padding-bottom"] = "-1px"
+                borders_style["border-bottom"] = f"1px solid {color}"
+            if borders >= 2:
+                borders_style["padding-right"] = "-1px"
+                borders_style["border-right"] = f"1px solid {color}"
+            if borders >= 3:
+                borders_style["padding-top"] = "-1px"
+                borders_style["border-top"] = f"1px solid {color}"
+            if borders >= 4:
+                borders_style["padding-left"] = "-1px"
+                borders_style["border-left"] = f"1px solid {color}"
 
             text = (
                 text[:start]
                 + make_element(
                     "span",
-                    label,
+                    visible_label[:-1],
                     {
                         "color": color,
                         "font-style": "normal",
@@ -332,7 +343,18 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                         **add_style,
                     },
                 )
-                + text[start + size :]
+                + make_element(
+                    "span",
+                    visible_label[-1],
+                    {
+                        "color": color,
+                        "font-style": "normal",
+                        "font-weight": "bold",
+                        **add_style,
+                        **borders_style,
+                    },
+                )
+                + text[start + consumed :]
             )
 
         offset = 1  # Adjust, so the text don't move
@@ -369,11 +391,78 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
 
         sheets_per_view[self.view.id()].set_contents(content)
 
+    def visible_label_for(self, label, typed, width):
+        width = max(width, 1)
+
+        if len(label) <= width:
+            return label, 0
+
+        matched = 0
+        for a, b in zip(typed, label):
+            if a != b:
+                break
+            matched += 1
+
+        if width == 1:
+            # Show the next char to type.
+            last_i = min(matched, len(label) - 1)
+            visible = label[last_i]
+        else:
+            # Keep first width - 1 chars stable.
+            # Only the last visible char scrolls.
+            last_i = max(width - 1, matched - 1)
+            last_i = min(last_i, len(label) - 1)
+
+            if last_i < width:
+                visible = label[:width]
+            else:
+                visible = label[: width - 1] + label[last_i]
+
+        borders = len(label) - last_i - 1
+        # the borders in the number of chars hidden on the right
+        return visible, borders
+
 
 class SelectCharSelectionRemoveLabelsCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         if self.view.id() in sheets_per_view:
             sheets_per_view.pop(self.view.id()).close()
+
+
+class JumperInputSetModeCommand(sublime_plugin.TextCommand):
+    def run(self, edit, extend):
+        jumper = active_jumper_input.get(self.view.id())
+        if not jumper:
+            return
+
+        extend = int(extend)
+
+        if jumper.extend == extend:
+            jumper.extend = 0
+        else:
+            jumper.extend = extend
+
+        label_search = self.view.substr(sublime.Region(0, self.view.size()))
+
+        jumper._show_labels(label_search)
+
+
+class JumperInputListener(sublime_plugin.EventListener):
+    def on_text_command(self, view, command_name, args):
+        if not view.settings().get("jumper_input"):
+            return None
+
+        jumper = active_jumper_input.get(view.id())
+        if not jumper:
+            return None
+
+        # Backspace with text: keep normal behavior.
+        # Backspace with empty input: reset mode.
+        if command_name == "left_delete" and view.size() == 0:
+            jumper.reset_mode()
+            return ("noop", {})
+
+        return None
 
 
 def make_element(tag, content, style, is_content_html=False):

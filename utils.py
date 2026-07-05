@@ -145,6 +145,14 @@ def select_next_region(view, regions, direction="next", extend=False):
         )
 
 
+def clean_charset(charset, case_sensitive):
+    # Remove the characters used by the mode-switching commands
+    charset = re.sub(r"[\s|]", "", charset)
+    if not case_sensitive:
+        charset = charset.lower()
+    return list(dict.fromkeys(charset))
+
+
 def get_word_separators(view):
     word_separators = view.settings().get("word_separators")
     return word_separators or "./\\()\"'-:,.;<>~!@#$%^&*|+=[]{}`~?"
