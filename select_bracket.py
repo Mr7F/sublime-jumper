@@ -10,7 +10,8 @@ class JumperSelectNextBracketCommand(sublime_plugin.TextCommand):
     def run(self, edit, direction="next", extend=False, brackets_text="[({})]"):
         assert len(brackets_text) % 2 == 0
         opening_bracket = brackets_text[: len(brackets_text) // 2]
-        _closing_bracket = brackets_text[len(brackets_text) // 2 :]
+        closing_bracket = brackets_text[len(brackets_text) // 2 :]
+        opening_for_closing = dict(zip(reversed(closing_bracket), opening_bracket))
 
         _brackets = self.view.find_by_selector("punctuation.section | punctuation.definition")
         brackets = []
@@ -24,20 +25,18 @@ class JumperSelectNextBracketCommand(sublime_plugin.TextCommand):
         if not brackets:
             return
 
-        # Create regions for content
+        # Create regions for content. Ignore unmatched brackets: incomplete code is
+        # expected while editing and must not make the command fail.
         brackets = sorted(brackets, key=lambda s: s.a)
-        i = next(
-            i for i, b in enumerate(brackets) if self.view.substr(b) in opening_bracket
-        )
-        brackets = brackets[i:]  # Force starting with opening bracket
-
         pairs = []
         stack = []
         for bracket in brackets:
-            if self.view.substr(bracket) in opening_bracket:
-                stack.append(bracket)
-            else:
-                pairs.append((stack.pop(), bracket))
+            character = self.view.substr(bracket)
+            if character in opening_bracket:
+                stack.append((character, bracket))
+            elif stack and stack[-1][0] == opening_for_closing.get(character):
+                _, opening_region = stack.pop()
+                pairs.append((opening_region, bracket))
 
         regions = [sublime.Region(a.b, b.a) for a, b in pairs]
         select_next_region(self.view, regions, direction, extend)

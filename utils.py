@@ -7,8 +7,16 @@ def get_next_element(html, index):
     # Return the size of the next element (in HTML code and in inner text)
     if html[index] == "<":
         m = re.match(r"^<.*?>", html[index:])
-        if "<br" in m.group(0).lower():
-            return m.end(), 1
+        tag = m.group(0).lower()
+        if "<br" in tag:
+            # `<br class="wrap">` are the visual line wraps added by the
+            # plugin, they do not exist in the buffer
+            return m.end(), 0 if "wrap" in tag else 1
+        if tag.startswith('<span class="wrap"'):
+            # Indentation of the wrapped rows added by the plugin, its
+            # content does not exist in the buffer
+            end = html.index("</span>", index) + len("</span>")
+            return end - index, 0
         return m.end(), 0
     if html[index] == "&":
         return re.match(r"^&.*?;", html[index:]).end(), 1

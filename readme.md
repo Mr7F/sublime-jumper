@@ -268,5 +268,5 @@ Run the command `jumper_previous_modification_panel` to open a panel with the hi
 # TODO
 - Find a way to add letter as row number to jump faster, once https://github.com/sublimehq/sublime_text/issues/6654 is done
 - "Go To Anywhere", when clicking on a tab, the input panel should close
-- "Go To Anywhere", read `word_wrap` settings (set to "auto"), seems to be `&nbsp;`, but a bit tricky to split the lines at the same place (it change depending on the language)
+- "Go To Anywhere", the labels sheet does not wrap the text (the export seems to use `&nbsp;`), so the labels are misaligned when `word_wrap` is enabled. The lines would need to be split at the same place as the editor (tricky, it change depending on the language)
 - Improve `select_selector` once https://github.com/sublimehq/sublime_text/issues/6660 is fixed

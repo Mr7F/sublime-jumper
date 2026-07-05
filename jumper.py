@@ -260,14 +260,15 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
         visible_region = views.get(self.view) or self.view.visible_region()
 
         text = self.view.export_to_html(visible_region, minihtml=True)
+        text = self._split_wrapped_lines(text, visible_region)
+
+        offset_region = visible_region.a
 
         line_padding_bottom = self.view.settings().get("line_padding_bottom", 0)
         line_padding_top = self.view.settings().get("line_padding_top", 0)
         line_height = int(
             self.view.line_height() + line_padding_bottom + line_padding_top
         )
-
-        offset_region = visible_region.a
         html_positions = get_element_html_positions(
             text,
             [p[1] - offset_region for p in positions],
@@ -390,6 +391,84 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
             sheets_per_view[self.view.id()] = sheet
 
         sheets_per_view[self.view.id()].set_contents(content)
+
+    def _split_wrapped_lines(self, text, visible_region):
+        """Break the lines of the exported HTML at the same places as the editor.
+
+        The sheet does not wrap the text (the export uses `&nbsp;`), so without
+        this the wrapped lines are clipped and the following labels shift up.
+        """
+        if self.view.settings().get("word_wrap") is False:
+            return text
+
+        if self.view.layout_extent()[0] > self.view.viewport_extent()[0]:
+            # Lines wider than the viewport: `word_wrap` ("auto") is resolved
+            # to disabled, nothing is wrapped
+            return text
+
+        wrap_points = self._wrap_points(visible_region)
+
+        if not wrap_points:
+            return text
+
+        offset_region = visible_region.a
+        em_width = self.view.em_width()
+
+        wrap_positions = get_element_html_positions(
+            text,
+            [p - offset_region for p in wrap_points],
+        )
+
+        for offset, (start, _) in sorted(wrap_positions.items(), reverse=True):
+            wrap_element = '<br class="wrap">'
+
+            # Reproduce the editor indentation of the wrapped row, measured
+            # from the layout (it depends on the language and the settings).
+            # The point after the row's first character is the first one
+            # reported on the row.
+            x = self.view.text_to_layout(offset + offset_region + 1)[0]
+            indent = round(x / em_width) - 1
+
+            if indent > 0:
+                wrap_element += '<span class="wrap">' + "&nbsp;" * indent + "</span>"
+
+            text = text[:start] + wrap_element + text[start:]
+
+        return text
+
+    def _wrap_points(self, visible_region):
+        """The points where the editor visually wraps a line (start of a new visual row)."""
+        view = self.view
+        points = []
+        point = visible_region.begin()
+        end = visible_region.end()
+
+        while point < end:
+            row_y = view.text_to_layout(point)[1]
+
+            if view.text_to_layout(end)[1] == row_y:
+                break
+
+            # First point reported on a next visual row
+            lo, hi = point + 1, end
+            while lo < hi:
+                mid = (lo + hi) // 2
+                if view.text_to_layout(mid)[1] > row_y:
+                    hi = mid
+                else:
+                    lo = mid + 1
+
+            # A point at the wrap boundary is reported at the end of the
+            # previous row, so the character starting the next row is just
+            # before `lo`
+            wrap_start = lo - 1
+
+            if "\n" not in view.substr(sublime.Region(wrap_start - 1, wrap_start + 1)):
+                points.append(wrap_start)
+
+            point = lo
+
+        return points
 
     def visible_label_for(self, label, typed, width):
         width = max(width, 1)

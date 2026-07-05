@@ -46,9 +46,7 @@ class TestDeferrable(DeferrableTestCase):
 
         # The input panel view is reused by other panels (eg rename file),
         # the keybindings must not stay active there
-        self.assertFalse(
-            command.input_view.settings().get("jumper_input")
-        )
+        self.assertFalse(command.input_view.settings().get("jumper_input"))
 
     def test_select_included(self):
         # Select until "you" included

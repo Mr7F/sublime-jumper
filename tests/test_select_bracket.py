@@ -89,3 +89,32 @@ class TestDeferrable(DeferrableTestCase):
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0].to_tuple(), (6, 32))
         self.view.close()
+
+    def test_unmatched_brackets_are_ignored(self):
+        # An extra trailing closer used to make `stack.pop()` fail.
+        self.view.run_command("insert", {"characters": "] []]"})
+
+        self.view.run_command(
+            "jumper_select_next_bracket",
+            {"direction": "previous", "brackets_text": "[]"},
+        )
+
+        # The valid pair between the unmatched closers remains selectable.
+        self.assertEqual([region.to_tuple() for region in self.view.sel()], [(3, 3)])
+        self.view.close()
+
+    def test_brackets_without_an_opener_are_ignored(self):
+        # A closer without any opener
+        self.view.run_command("insert", {"characters": "]]"})
+        initial_selection = [region.to_tuple() for region in self.view.sel()]
+
+        self.view.run_command(
+            "jumper_select_next_bracket",
+            {"direction": "previous", "brackets_text": "[]"},
+        )
+
+        self.assertEqual(
+            [region.to_tuple() for region in self.view.sel()],
+            initial_selection,
+        )
+        self.view.close()
