@@ -1,6 +1,12 @@
 import sublime
 import sublime_plugin
+
 from .utils import select_next_region
+
+
+_string_boundary_selector = (
+    "punctuation.definition.string | punctuation.definition.raw"
+)
 
 
 class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
@@ -17,6 +23,7 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
         selector=None,
         extend=False,
         trim=False,
+        trim_selector=None,
     ):
         if selector is None:
             raw_strings = self.view.find_by_selector(
@@ -32,58 +39,49 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
                 if not to_add:
                     break
 
-            # remove the quotes
-            strings = []
-            for region in raw_strings.copy():
-                scopes = self.view.extract_tokens_with_scopes(region)
-                scopes = [(r, s.strip().split(" ")[-1]) for r, s in scopes]
-                start = next(
-                    (
-                        i
-                        for i in range(len(scopes))
-                        if "punctuation.definition.string.begin" not in scopes[i][1]
-                        and "punctuation.definition.raw.begin.markdown"
-                        not in scopes[i][1]
-                    ),
-                    None,
-                )
-                end = next(
-                    (
-                        i
-                        for i in range(len(scopes) - 1, -1, -1)
-                        if "punctuation.definition.string.end" not in scopes[i][1]
-                        and "punctuation.definition.raw.end.markdown"
-                        not in scopes[i][1]
-                    ),
-                    None,
-                )
-                if start is None or end is None:
-                    continue
-
-                r = [x for rr, _ in scopes[start : end + 1] for x in rr]
-                if r:
-                    strings.append(sublime.Region(min(r), max(r)))
-                else:
-                    # empty string, heuristic, take the middle of the string
-                    mid = (region.a + region.b) // 2
-                    strings.append(sublime.Region(mid, mid))
+            strings = raw_strings
+            trim_selector = trim_selector or _string_boundary_selector
 
         else:
             strings = self.view.find_by_selector(selector)
 
-        if trim:
-            # Don't select starting / ending whitespace if any
-            old_strings = strings
-            strings = []
-            for reg in old_strings:
-                content = self.view.substr(reg)
-                l = len(content) - len(content.lstrip())
-                r = len(content) - len(content.rstrip())
-                if reg.a + l < reg.b - r:
-                    strings.append(sublime.Region(reg.a + l, reg.b - r))
-                else:
-                    # empty after trim, so we move the cursor at the beginning
-                    strings.append(sublime.Region(reg.a, reg.a))
+        if trim_selector:
+            strings = [
+                _trim_region_by_selector(self.view, region, trim_selector)
+                for region in strings
+            ]
 
+        if trim:
+            strings = [_trim_whitespace(self.view, region) for region in strings]
 
         select_next_region(self.view, strings, direction, extend)
+
+
+def _trim_region_by_selector(view, region, selector):
+    """Trim matching boundary tokens, preserving matching tokens inside."""
+    tokens = view.extract_tokens_with_scopes(region)
+    content = [
+        token_region.intersection(region)
+        for token_region, scope in tokens
+        if sublime.score_selector(scope, selector) == 0
+    ]
+
+    if content:
+        return sublime.Region(content[0].begin(), content[-1].end())
+
+    # All tokens were trimmed. Place the cursor after the opening token.
+    point = min(tokens[0][0].end(), region.end()) if tokens else region.begin()
+    return sublime.Region(point, point)
+
+
+def _trim_whitespace(view, region):
+    """Trim boundary whitespace, collapsing whitespace-only regions."""
+    content = view.substr(region)
+    left = len(content) - len(content.lstrip())
+    right = len(content) - len(content.rstrip())
+
+    begin = region.begin() + left
+    end = region.end() - right
+    if begin < end:
+        return sublime.Region(begin, end)
+    return sublime.Region(region.begin(), region.begin())

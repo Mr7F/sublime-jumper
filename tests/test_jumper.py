@@ -16,9 +16,11 @@ class TestDeferrable(DeferrableTestCase):
         self.view.run_command("insert", {"characters": _line})
 
     def tearDown(self):
-        command = jumper.active_jumper_by_window.get(self.view.window().id())
+        window = self.view.window()
+        command = jumper.active_jumper_by_window.get(window.id())
         if command is not None:
             command.on_cancel()
+        window.run_command("show_panel", {"panel": "output.UnitTesting"})
         self.view.close()
 
     def _run_jumper(self, regex, extend=False, current_line=True):

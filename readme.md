@@ -168,6 +168,20 @@ By default, the selector match the strings.
 },
 ```
 
+Use `trim_selector` to remove matching syntax tokens from the beginning and end
+of each result while keeping matching tokens inside the content (even if empty).
+```json
+{
+    "keys": ["alt+primary+super+4"],
+    "command": "jumper_select_selector",
+    "args": {
+        "selector": "comment",
+        "trim_selector": "punctuation",
+        "trim": true
+    }
+}
+```
+
 ## Select Next / Previous Bracket Content
 Select the content of the next / previous `(){}[]` (using selector, to skip false positive).
 
