@@ -275,7 +275,7 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
         style = self.view.style()
 
         positions = sorted(positions, key=lambda x: x[1], reverse=True)
-        for i, (c, a, b) in enumerate(positions):
+        for i, (label, a, b) in enumerate(positions):
             html_position = html_positions.get(a - offset_region)
             if not html_position:
                 continue
@@ -284,11 +284,11 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 ({1: style["yellowish"], 2: style["bluish"], 3: style["greenish"]}).get(
                     int(extend), style["pinkish"]
                 )
-                if c.startswith(label_search)
+                if label.startswith(label_search)
                 else style["caret"]
             )
 
-            add_style = {
+            background_style = {
                 "background-color": style["inactive_selection"],
                 "border-radius": "5px",
             }
@@ -296,8 +296,8 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
             start, _ = html_position
 
             visible_label_max_width = max(b - a, 1)
-            visible_label, borders = self.visible_label_for(
-                c,
+            visible_label, borders, visible_label_index = self.visible_label_for(
+                label,
                 label_search,
                 visible_label_max_width,
             )
@@ -316,48 +316,40 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
 
             borders_style = {}
             if borders >= 1:
-                borders_style["background-color"] = ""
                 borders_style["border-radius"] = "0px"
-                borders_style["padding-bottom"] = "-1px"
-                borders_style["border-bottom"] = f"1px solid {color}"
-            if borders >= 2:
                 borders_style["padding-right"] = "-1px"
                 borders_style["border-right"] = f"1px solid {color}"
-            if borders >= 3:
+            if borders >= 2:
                 borders_style["padding-top"] = "-1px"
                 borders_style["border-top"] = f"1px solid {color}"
-            if borders >= 4:
+            if borders >= 3:
                 borders_style["padding-left"] = "-1px"
                 borders_style["border-left"] = f"1px solid {color}"
+            if borders >= 4:
+                borders_style["padding-bottom"] = "-1px"
+                borders_style["border-bottom"] = f"1px solid {color}"
 
-            text = (
-                text[:start]
-                + make_element(
-                    "span",
-                    visible_label[:-1],
-                    {
-                        "color": color,
-                        "font-style": "normal",
-                        "font-weight": "bold",
-                        **add_style,
-                    },
-                )
-                + make_element(
-                    "span",
-                    visible_label[-1],
-                    {
-                        "color": color,
-                        "font-style": "normal",
-                        "font-weight": "bold",
-                        **add_style,
-                        **borders_style,
-                    },
-                )
-                + text[start + consumed :]
-            )
+            base_label_style = {
+                "color": color,
+                "font-style": "normal",
+                "font-weight": "bold",
+            }
+
+            visible_label_html = ""
+            for i, char in enumerate(visible_label):
+                char_style = dict(base_label_style)
+
+                if i == len(visible_label) - 1:
+                    char_style.update(borders_style)
+
+                if i == visible_label_index:
+                    char_style.update(background_style)
+
+                visible_label_html += make_element("span", char, char_style)
+
+            text = text[:start] + visible_label_html + text[start + consumed :]
 
         offset = 1  # Adjust, so the text don't move
-
         text += "<style>html, body {padding: 0px; margin: 0px}</style>"
         text = text.replace("<br>", "<br>&#8203;")
 
@@ -520,11 +512,21 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
 
         return points
 
-    def visible_label_for(self, label, typed, width):
-        width = max(width, 1)
+    @staticmethod
+    def visible_label_for(label, typed, width):
+        """Build the label that we will show in the editor.
 
-        if len(label) <= width:
-            return label, 0
+        :param label: the label corresponding to the word
+        :param typed: what the user typed
+        :param width: the size of the word
+            (visible label cannot exceed that size)
+        :return:
+            - the visible label to show at the start of the word
+            - the number of chars we couldn't show on the right
+            - the index in the visible label of the next char that we need to type
+        """
+        width = max(width, 1)
+        label_matches = label.startswith(typed)
 
         matched = 0
         for a, b in zip(typed, label):
@@ -532,24 +534,28 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
                 break
             matched += 1
 
-        if width == 1:
-            # Show the next char to type.
-            last_i = min(matched, len(label) - 1)
-            visible = label[last_i]
-        else:
-            # Keep first width - 1 chars stable.
-            # Only the last visible char scrolls.
-            last_i = max(width - 1, matched - 1)
-            last_i = min(last_i, len(label) - 1)
+        if len(label) <= width:
+            visible_label_index = (
+                matched if label_matches and matched < len(label) else None
+            )
+            return label, 0, visible_label_index
 
-            if last_i < width:
-                visible = label[:width]
-            else:
-                visible = label[: width - 1] + label[last_i]
+        # Scroll the visible window as the user types, but never past the end.
+        visible_start = min(matched, len(label) - width)
+        visible_end = visible_start + width
 
-        borders = len(label) - last_i - 1
-        # the borders in the number of chars hidden on the right
-        return visible, borders
+        visible_label = label[visible_start:visible_end]
+        borders = (len(label) - visible_end) if label_matches else 0
+
+        # Index of the character inside the visible label we need to type next.
+        # If the label is already fully typed, there is no next character.
+        visible_label_index = None
+        if label_matches and matched < len(label):
+            visible_label_index = matched - visible_start
+            if not 0 <= visible_label_index < len(visible_label):
+                visible_label_index = None
+
+        return visible_label, borders, visible_label_index
 
 
 class SelectCharSelectionRemoveLabelsCommand(sublime_plugin.TextCommand):
