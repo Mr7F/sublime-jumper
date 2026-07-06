@@ -69,6 +69,139 @@ class TestDeferrable(DeferrableTestCase):
             (expected, expected + len(" hello! ")),
         )
 
+    def test_replace_advances_only_the_latest_added_selection(self):
+        text = '"one" "two" "three"'
+        self.view.run_command("insert", {"characters": text})
+
+        self.view.sel().clear()
+        self.view.sel().add(sublime.Region(0, 0))
+
+        # Select the first target, retain the second, then replace only that
+        # latest target with the third one.
+        self.view.run_command("jumper_select_selector")
+        self.view.run_command("jumper_select_selector", {"mode": "add"})
+        self.view.run_command("jumper_select_selector")
+
+        self.assertEqual(
+            [self.view.substr(region) for region in self.view.sel()],
+            ["one", "three"],
+        )
+        self.assertEqual(
+            [
+                self.view.substr(region)
+                for region in self.view.get_regions(
+                    "jumper-selection-frontier-indicators"
+                )
+            ],
+            ["three"],
+        )
+
+    def test_add_moves_frontier_through_existing_selections(self):
+        text = '"one" "two" "three"'
+        self.view.run_command("insert", {"characters": text})
+
+        self.view.sel().clear()
+        self.view.sel().add(sublime.Region(0, 0))
+
+        self.view.run_command("jumper_select_selector")
+        self.view.run_command("jumper_select_selector", {"mode": "add"})
+        self.view.run_command("jumper_select_selector", {"mode": "add"})
+
+        # Moving backward with add keeps all selections and moves only the
+        # frontier from `three` to the already-selected `two`.
+        self.view.run_command(
+            "jumper_select_selector",
+            {"direction": "previous", "mode": "add"},
+        )
+        self.assertEqual(
+            [self.view.substr(region) for region in self.view.sel()],
+            ["one", "two", "three"],
+        )
+        self.assertEqual(
+            [
+                self.view.substr(region)
+                for region in self.view.get_regions(
+                    "jumper-selection-frontier-indicators"
+                )
+            ],
+            ["two"],
+        )
+
+        # Replacing toward the next target removes only `two`; `three` was
+        # already selected and simply becomes the new frontier.
+        self.view.run_command("jumper_select_selector")
+        self.assertEqual(
+            [self.view.substr(region) for region in self.view.sel()],
+            ["one", "three"],
+        )
+
+    def test_add_previous_visits_existing_selection_before_unselected_target(self):
+        text = "'a' 'b' 'c' 'd'"
+        self.view.run_command("insert", {"characters": text})
+
+        def selected_text():
+            return [self.view.substr(region) for region in self.view.sel()]
+
+        def frontier_text():
+            return [
+                self.view.substr(region)
+                for region in self.view.get_regions(
+                    "jumper-selection-frontier"
+                )
+            ]
+
+        # Start after `a`, select `b`, and add `c`.
+        after_a = text.index("'a'") + len("'a'")
+        self.view.sel().clear()
+        self.view.sel().add(sublime.Region(after_a))
+
+        self.view.run_command("jumper_select_selector")
+        self.assertEqual(selected_text(), ["b"])
+        self.assertEqual(frontier_text(), ["b"])
+
+        self.view.run_command("jumper_select_selector", {"mode": "add"})
+        self.assertEqual(selected_text(), ["b", "c"])
+        self.assertEqual(frontier_text(), ["c"])
+
+        # `b` is already selected, but it must still be the immediate previous
+        # target. The unselected `a` must not be reached yet.
+        self.view.run_command(
+            "jumper_select_selector",
+            {"direction": "previous", "mode": "add"},
+        )
+        self.assertEqual(selected_text(), ["b", "c"])
+        self.assertEqual(frontier_text(), ["b"])
+
+    def test_native_arrow_movement_clears_frontier(self):
+        text = '"one" "two"'
+        self.view.run_command("insert", {"characters": text})
+
+        self.view.sel().clear()
+        self.view.sel().add(sublime.Region(0))
+        self.view.run_command("jumper_select_selector")
+
+        self.assertTrue(
+            self.view.get_regions("jumper-selection-frontier")
+        )
+        self.assertTrue(
+            self.view.get_regions("jumper-selection-frontier-indicators")
+        )
+
+        # This is the command Sublime runs for a right-arrow key press.
+        self.view.run_command(
+            "move",
+            {"by": "characters", "forward": True},
+        )
+
+        self.assertEqual(
+            self.view.get_regions("jumper-selection-frontier"),
+            [],
+        )
+        self.assertEqual(
+            self.view.get_regions("jumper-selection-frontier-indicators"),
+            [],
+        )
+
     def test_navigate_nested_f_strings(self):
         text = 'f"aaaa{\'test1\'}bbb{\'test2\'}ccc{\'test3\'}"'
         self.view.run_command("insert", {"characters": text})
@@ -90,15 +223,16 @@ class TestDeferrable(DeferrableTestCase):
             (first, "test1"),
             (second, "test2"),
             (third, "test3"),
+            (outer, outer_text),
         ]
         for expected_region, expected_text in expected_right:
             self.view.run_command("jumper_select_selector")
             self._assert_selection(expected_region, expected_text)
 
         expected_left = [
+            (third, "test3"),
             (second, "test2"),
             (first, "test1"),
-            (outer, outer_text),
             (outer, outer_text),
         ]
         for expected_region, expected_text in expected_left:
@@ -130,15 +264,16 @@ class TestDeferrable(DeferrableTestCase):
             (first, "test1"),
             (second, "test2"),
             (third, "test3"),
+            (outer, outer_text),
         ]
         for expected_region, expected_text in expected_right:
             self.view.run_command("jumper_select_selector")
             self._assert_selection(expected_region, expected_text)
 
         expected_left = [
+            (third, "test3"),
             (second, "test2"),
             (first, "test1"),
-            (outer, outer_text),
             (outer, outer_text),
         ]
         for expected_region, expected_text in expected_left:

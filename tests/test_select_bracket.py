@@ -21,35 +21,35 @@ class TestDeferrable(DeferrableTestCase):
 
         self.view.run_command(
             "jumper_select_next_bracket",
-            {"direction": "previous", "extend": False, "brackets_text": "[]"},
+            {"direction": "previous", "mode": "replace", "brackets_text": "[]"},
         )
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0].to_tuple(), (56, 57))
 
         self.view.run_command(
             "jumper_select_next_bracket",
-            {"direction": "previous", "extend": False, "brackets_text": "[]"},
+            {"direction": "previous", "mode": "replace", "brackets_text": "[]"},
         )
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0].to_tuple(), (55, 91))
 
         self.view.run_command(
             "jumper_select_next_bracket",
-            {"direction": "previous", "extend": False, "brackets_text": "[]"},
+            {"direction": "previous", "mode": "replace", "brackets_text": "[]"},
         )
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0].to_tuple(), (26, 30))
 
         self.view.run_command(
             "jumper_select_next_bracket",
-            {"direction": "previous", "extend": False, "brackets_text": "{}"},
+            {"direction": "previous", "mode": "replace", "brackets_text": "{}"},
         )
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0].to_tuple(), (19, 31))
 
         self.view.run_command(
             "jumper_select_next_bracket",
-            {"direction": "previous", "extend": True, "brackets_text": "[]"},
+            {"direction": "previous", "mode": "add", "brackets_text": "[]"},
         )
         self.assertEqual(len(self.view.sel()), 2)
         self.assertEqual(self.view.sel()[0].to_tuple(), (9, 13))
@@ -57,7 +57,7 @@ class TestDeferrable(DeferrableTestCase):
 
         self.view.run_command(
             "jumper_select_next_bracket",
-            {"direction": "next", "extend": True, "brackets_text": "[]"},
+            {"direction": "next", "mode": "add", "brackets_text": "[]"},
         )
         self.assertEqual(len(self.view.sel()), 3)
         self.assertEqual(self.view.sel()[0].to_tuple(), (9, 13))
@@ -66,7 +66,7 @@ class TestDeferrable(DeferrableTestCase):
 
         self.view.run_command(
             "jumper_select_next_bracket",
-            {"direction": "previous", "extend": False, "brackets_text": "{}"},
+            {"direction": "previous", "mode": "replace", "brackets_text": "{}"},
         )
         self.assertEqual(len(self.view.sel()), 2)
         self.assertEqual(self.view.sel()[0].to_tuple(), (9, 13))
@@ -74,17 +74,19 @@ class TestDeferrable(DeferrableTestCase):
 
         self.view.run_command(
             "jumper_select_next_bracket",
-            {"direction": "next", "extend": False, "brackets_text": "{}"},
+            {"direction": "next", "mode": "replace", "brackets_text": "{}"},
         )
-        self.assertEqual(len(self.view.sel()), 1)
-        self.assertEqual(self.view.sel()[0].to_tuple(), (19, 31))
+        # The only {} target wraps to itself; retained selections stay intact.
+        self.assertEqual(len(self.view.sel()), 2)
+        self.assertEqual(self.view.sel()[0].to_tuple(), (9, 13))
+        self.assertEqual(self.view.sel()[1].to_tuple(), (19, 31))
 
         # Cursor just at the border of the (), should select the () content
         self.view.sel().clear()
         self.view.sel().add(sublime.Region(6, 12))
         self.view.run_command(
             "jumper_select_next_bracket",
-            {"direction": "previous", "extend": False, "brackets_text": "()"},
+            {"direction": "previous", "mode": "replace", "brackets_text": "()"},
         )
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0].to_tuple(), (6, 32))

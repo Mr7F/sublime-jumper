@@ -144,7 +144,7 @@ class JumperCommand(sublime_plugin.TextCommand):
         for i, (view, region) in enumerate(matches):
             label = labels.get(i)
             if label is not None:
-                self.positions[view][label] = JumperLabel(region, label)
+                self.positions[view][label] = JumperLabel(region)
 
     def _show_labels(self, label_search=""):
         for view, values in self.positions.items():
@@ -156,7 +156,7 @@ class JumperCommand(sublime_plugin.TextCommand):
                 "select_char_selection_add_labels",
                 {
                     "positions": [
-                        (c, label.label_region.a, label.label_region.b)
+                        (c, label.region.a, label.region.b)
                         for c, label in values.items()
                     ],
                     "label_search": label_search,
@@ -254,8 +254,6 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
     """Do those modifications in a command, to easily undo it once we are done."""
 
     def run(self, edit, positions, label_search, extend):
-        self.extend = extend
-
         visible_region = views.get(self.view) or self.view.visible_region()
 
         text = self.view.export_to_html(visible_region, minihtml=True)

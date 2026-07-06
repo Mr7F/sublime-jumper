@@ -129,7 +129,6 @@ class JumperPreviousModificationCommand(sublime_plugin.TextCommand):
             _views_to_close, \
             _cursor_queue, \
             _position_start
-        print("_history", _history)
 
         if _position_start is None:
             _position_start = HistoryItem(self.view)
@@ -219,7 +218,6 @@ class HistoryItem:
         self.window = self.view.window()
         self.position = view.sel()[0]
         self.group = self.view.sheet().group()
-        self.name = self.file_name or view.name()
 
     def region(self, view) -> int:
         region = view.transform_region_from(self.position, self.change_id).a

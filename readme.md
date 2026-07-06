@@ -1,8 +1,11 @@
 # Sublime - Jumper
+
 ## Go To Anywhere
+
 Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMotion) and [Ace Jump](https://github.com/acejump/AceJump), press a shortcut to label every match of a regex visible on the screen. Typing the label jumps to that position.
 
 While the labels are shown, you can switch mode:
+
 - "`enter`" then the label: select everything between the cursor and the target, target included (the color will change)
 - "`tab`" then the label: select everything between the cursor and the target, target excluded (the color will change)
 - "`|`" then the label: keep the current selection and add a new cursor at the target
@@ -13,6 +16,7 @@ While the labels are shown, you can switch mode:
 </p>
 
 ```json
+[
 {
     // Label all the words on the screen
     "keys": ["shift+find"],
@@ -25,14 +29,15 @@ While the labels are shown, you can switch mode:
     "keys": ["find"],
     "command": "jumper",
     "args": {"regex": "\\w+", "current_line": true}
-},
+}
+]
 ```
 
-The `extend` argument accepts the mode to start with: `1` select until the target excluded, `2` select until the target included, `3` add a new cursor at the target.
+The `extend` argument selects the initial mode: `1` selects up to the target but excludes it, `2` includes the target, and `3` adds a cursor at the target.
 
 The labels are **derived from the matched text**: a match starting with a unique letter is labelled by that letter, so typing the first letter of your target usually jumps there directly. When several matches start with the same letter, longer labels are generated (preferring the following characters of the matched text).
 
-You can change the charset used for the labels (the preferred characters first). Whitespace, "`enter`", "`tab`" and "`|`" can not be used, they are reserved to switch mode:
+You can change the character set used for labels, listing preferred characters first. Whitespace, "`enter`", "`tab`", and "`|`" are reserved for switching modes and cannot be used:
 
 ```json
 {
@@ -50,7 +55,7 @@ Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope)
 
 With `jumper_escalate_line_to_screen`, pressing the "current line" shortcut a second time re-executes the command on the whole screen instead of only the current line.
 
-With `jumper_case_sensitive`, you can make the search and the labels case sensitive (insensitive by default `false`).
+Set `jumper_case_sensitive` to `true` to make searches and labels case-sensitive. The default is `false`.
 
 When a label has more characters than the matched text can display, borders are shown around the last visible character. They will disappear while you type the label.
 
@@ -68,41 +73,77 @@ You can check the branch `master-all-labels-methods` to see all possible way to 
 - popup: we show a popup, but you will see a shadow and you can not jump to the first line
 - sheet: the default implementation, only drawback is that when you are in "label typing" mode, you can not select text with the mousse
 
-## Select Next Selection Match
-The command `select_next_same_selection` will select the next / previous text matching the current selection
-(you can also add it to the current selection, and it will be the same as `find_under_expand`).
+## Frontier Selection
+
+The selector, bracket, and matching-text commands share a frontier: the
+selection that advances the next time a navigation command runs. A gutter dot
+identifies each frontier.
+
+All three commands accept `"direction": "next"` (the default) or
+`"direction": "previous"`, and `"mode": "replace"` (the default) or
+`"mode": "add"`. Each selected target becomes the new frontier. Replace mode
+replaces only the frontier, while selections added earlier remain selected.
+
+### Select Matching Text
+
+The `jumper_select_matching_text` command selects the next or previous text that
+matches the current selection.
 
 Like `find_under_expand`,
-- if you press the shortcut when no text selected, then it will search for the whole word
-- if you press the shortcut when a text is selected, then it will select the next text (whole word or not)
-- the difference is that you can go backward, and that it is always case sensitive
+
+- with an empty cursor, the first invocation selects the current word and enables whole-word matching
+- with selected text, it searches for that exact text without requiring whole-word boundaries
+- matching is always case-sensitive
+
+The frontier dot is green in text mode and cyan in word mode.
+
+```json
+[
+{
+    "keys": ["alt+ctrl+super+/"],
+    "command": "jumper_select_matching_text"
+},
+{
+    "keys": ["alt+ctrl+super+\\"],
+    "command": "jumper_select_matching_text",
+    "args": {"direction": "previous"}
+},
+{
+    "keys": ["shift+alt+ctrl+super+/"],
+    "command": "jumper_select_matching_text",
+    "args": {"mode": "add"}
+},
+{
+    "keys": ["shift+alt+ctrl+super+\\"],
+    "command": "jumper_select_matching_text",
+    "args": {"direction": "previous", "mode": "add"}
+}
+]
+```
 
 <p align="center">
-  <img src="img/demo_same_selection.gif">
+  <img src="img/demo_matching_text.gif">
 </p>
 
-A dot is displayed in the gutter for the "main cursors" when they are many (the cursor from which the selection will be extended).
-
-That dot is "green" when in "text mode", or blue when in "word mode" (you pressed the shortcut without selecting anything).
-
-## Select Selector
+### Select Selector
 
 <p align="center">
   <img src="img/demo_strings.gif">
 </p>
 
-The command `jumper_select_selector` select the next / previous text matching the sublime selector.
+The `jumper_select_selector` command selects the next or previous region that
+matches a Sublime selector.
 
-The idea is to have something similar than "select inside parenthesis" command of Vim.
+This provides syntax-aware navigation similar to Vim text objects.
 
 See:
 - https://www.sublimetext.com/docs/scope_naming.html
 - https://www.sublimetext.com/docs/selectors.html
 
-By default, the selector match the strings.
+By default, it selects string contents.
 
 ```json
-// Select next / previous strings
+[
 {
     "keys": ["alt+ctrl+super+'"],
     "command": "jumper_select_selector"
@@ -115,12 +156,12 @@ By default, the selector match the strings.
 {
     "keys": ["shift+alt+ctrl+super+'"],
     "command": "jumper_select_selector",
-    "args": {"extend": true}
+    "args": {"mode": "add"}
 },
 {
     "keys": ["shift+alt+ctrl+super+`"],
     "command": "jumper_select_selector",
-    "args": {"direction": "previous", "extend": true}
+    "args": {"direction": "previous", "mode": "add"}
 },
 // Select next / previous class / function
 {
@@ -132,13 +173,13 @@ By default, the selector match the strings.
     "keys": ["alt+ctrl+super+w"],
     "command": "jumper_select_selector",
     "args": {"direction": "previous", "selector": "entity.name"}
-}
+},
 // next / previous condition / loop
 {
     "keys": ["alt+ctrl+super+i"],
     "command": "jumper_select_selector",
     "args": {
-        "selector": "keyword.control.conditional | keyword.control.loop - keyword.control.loop.for.in",
+        "selector": "keyword.control.conditional | keyword.control.loop - keyword.control.loop.for.in"
     }
 },
 {
@@ -146,30 +187,32 @@ By default, the selector match the strings.
     "command": "jumper_select_selector",
     "args": {
         "direction": "previous",
-        "selector": "keyword.control.conditional | keyword.control.loop - keyword.control.loop.for.in",
+        "selector": "keyword.control.conditional | keyword.control.loop - keyword.control.loop.for.in"
     }
 },
 {
-"keys": ["shift+alt+ctrl+super+i"],
+    "keys": ["shift+alt+ctrl+super+i"],
     "command": "jumper_select_selector",
     "args": {
-        "extend": true,
-        "selector": "keyword.control.conditional | keyword.control.loop - keyword.control.loop.for.in",
+        "mode": "add",
+        "selector": "keyword.control.conditional | keyword.control.loop - keyword.control.loop.for.in"
     }
 },
 {
-"keys": ["shift+alt+ctrl+super+e"],
+    "keys": ["shift+alt+ctrl+super+e"],
     "command": "jumper_select_selector",
     "args": {
         "selector": "keyword.control.conditional | keyword.control.loop - keyword.control.loop.for.in",
         "direction": "previous",
-        "extend": true
+        "mode": "add"
     }
-},
+}
+]
 ```
 
 Use `trim_selector` to remove matching syntax tokens from the beginning and end
 of each result while keeping matching tokens inside the content (even if empty).
+
 ```json
 {
     "keys": ["alt+primary+super+4"],
@@ -182,8 +225,10 @@ of each result while keeping matching tokens inside the content (even if empty).
 }
 ```
 
-## Select Next / Previous Bracket Content
-Select the content of the next / previous `(){}[]` (using selector, to skip false positive).
+### Select Next / Previous Bracket Content
+
+The `jumper_select_next_bracket` command selects the contents of the next or
+previous `()`, `{}`, or `[]` pair.
 
 <p align="center">
   <img src="img/demo_bracket.gif">
@@ -191,9 +236,10 @@ Select the content of the next / previous `(){}[]` (using selector, to skip fals
 
 
 ```json
+[
 {
     "keys": ["alt+ctrl+super+]"],
-    "command": "jumper_select_next_bracket",
+    "command": "jumper_select_next_bracket"
 },
 {
     "keys": ["alt+ctrl+super+["],
@@ -203,23 +249,26 @@ Select the content of the next / previous `(){}[]` (using selector, to skip fals
 {
     "keys": ["shift+alt+ctrl+super+]"],
     "command": "jumper_select_next_bracket",
-    "args": {"extend": true}
+    "args": {"mode": "add"}
 },
 {
     "keys": ["shift+alt+ctrl+super+["],
     "command": "jumper_select_next_bracket",
-    "args": {"direction": "previous", "extend": true}
-},
+    "args": {"direction": "previous", "mode": "add"}
+}
+]
 ```
 
-Or if you want to select the next / previous parenthesis content:
+Or if you want to select the next or previous parenthesis content:
+
 ```json
+[
 {
     "keys": ["alt+ctrl+super+]"],
     "command": "jumper_select_next_bracket",
     "args": {
-      "brackets_text": "()"
-    },
+        "brackets_text": "()"
+    }
 },
 {
     "keys": ["alt+ctrl+super+["],
@@ -229,31 +278,41 @@ Or if you want to select the next / previous parenthesis content:
 {
     "keys": ["shift+alt+ctrl+super+]"],
     "command": "jumper_select_next_bracket",
-    "args": {"extend": true, "brackets_text": "()"}
+    "args": {"mode": "add", "brackets_text": "()"}
 },
 {
     "keys": ["shift+alt+ctrl+super+["],
     "command": "jumper_select_next_bracket",
-    "args": {"direction": "previous", "extend": true, "brackets_text": "()"}
+    "args": {"direction": "previous", "mode": "add", "brackets_text": "()"}
 }
+]
 ```
 
-If you are inside `()`, selecting "previous ()" will select the parent parenthesis, while selecting "next ()" will select the next one.
+When the selection is inside `()`, moving to the previous pair selects the
+parent pair; moving to the next pair selects the following one.
 
 ## Go To Previous Modification
-["Go To Modification" on steroid. (see demo)](https://youtu.be/QUIU8pPL6QE) The command `jumper_previous_modification` allow you to go to the next / previous modification, even if it was
+
+[`jumper_previous_modification` demo](https://youtu.be/QUIU8pPL6QE)
+
+The `jumper_previous_modification` command moves through modification history,
+including modifications:
+
 - in a different tab
-- in a different panel
+- in a different group
 - in a different window
-- in a non-saved sheet
+- in an unsaved sheet
 
-It will remember where the file was opened, and try to re-open it at the same place if possible (if not, it will re-open the file in the current window).
+It remembers the original window and group and tries to reopen files there. If
+that is not possible, it reopens them in the current window.
 
-By default, it won't jump many time on the same line.
+History keeps only the most recent modification for each line.
 
-You can also go to next / previous modified file.
+Set `"per_file": true` to move between modified files instead of individual
+modifications.
 
 ```json
+[
 {
     "keys": ["ctrl+,"],
     "command": "jumper_previous_modification"
@@ -272,14 +331,16 @@ You can also go to next / previous modified file.
     "keys": ["ctrl+shift+."],
     "command": "jumper_previous_modification",
     "args": {"direction": "next", "per_file": true}
-},
+}
+]
 ```
 
-If it open a new sheet, it will be closed automatically if no modification are made inside.
+When a history jump temporarily opens a sheet, a later history jump closes it
+unless it has been modified.
 
 Run the command `jumper_previous_modification_panel` to open a panel with the history.
 
-# TODO
-- Find a way to add letter as row number to jump faster, once https://github.com/sublimehq/sublime_text/issues/6654 is done
+## TODO
+
 - "Go To Anywhere", when clicking on a tab, the input panel should close
-- Improve `select_selector` once https://github.com/sublimehq/sublime_text/issues/6660 is fixed
+- Improve `jumper_select_selector` once https://github.com/sublimehq/sublime_text/issues/6660 is fixed

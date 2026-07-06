@@ -2,6 +2,12 @@ import re
 
 import sublime
 
+from .selection_frontier import (
+    get_frontier,
+    same_region,
+    set_frontier,
+)
+
 
 def get_next_element(html, index):
     # Return the size of the next element (in HTML code and in inner text)
@@ -24,16 +30,12 @@ def get_next_element(html, index):
 
 
 class JumperLabel:
-    def __init__(self, region, character, label_region=None):
+    def __init__(self, region):
         """Represent a label in the editor where we can jump to.
 
         :param region: The region where we can jump / select
-        :param character: The character used to jump to the region
-        :param label_region: Where that character is displayed
         """
         self.region = region
-        self.character = character
-        self.label_region = region if label_region is None else label_region
 
     def jump_to(self, view, cursor_region, extend, included):
         """Jump to the target region.
@@ -63,30 +65,85 @@ class JumperLabel:
                 view.sel().add(sublime.Region(cursor_a, self.region.a))
 
 
-def select_next_region(view, regions, direction="next", extend=False):
+def apply_selection_targets(
+    view,
+    origins,
+    targets,
+    mode="replace",
+    scope="region.greenish",
+):
+    """Apply resolved targets and make them the next navigation frontier."""
+    add = selection_mode_adds(mode)
+    targets = [target for target in targets if target is not None]
+    if not targets:
+        return False
+
+    if not add:
+        for origin in origins:
+            view.sel().subtract(origin)
+
+    view.sel().add_all(targets)
+
+    # Sublime merges intersecting selections. Store the resulting native
+    # selections as the frontier so it remains valid after that normalization.
+    frontier = []
+    for selection in view.sel():
+        if any(
+            selection.begin() <= target.begin()
+            and selection.end() >= target.end()
+            for target in targets
+        ):
+            frontier.append(selection)
+
+    set_frontier(view, frontier, scope=scope)
+    view.show(frontier[0])
+
+    view.window().run_command(
+        "add_jump_record",
+        {"selection": [selection.to_tuple() for selection in view.sel()]},
+    )
+    return True
+
+
+def selection_mode_adds(mode):
+    if mode not in ("replace", "add"):
+        raise ValueError("mode must be 'replace' or 'add'")
+    return mode == "add"
+
+
+def select_next_region(view, regions, direction="next", mode="replace"):
     """Given a list of region, select the next / previous one.
 
     The region can overlap (eg a nested json, etc).
     """
     if direction == "next":
-        # use max here to always explore child before parent
         regions = sorted(regions, key=lambda r: min(r))
     else:
         regions = sorted(regions, key=lambda r: min(r), reverse=True)
 
-    if extend:
-        # Remove regions inside selection
+    origins = get_frontier(view) or list(view.sel())
+
+    add = selection_mode_adds(mode)
+
+    if add:
+        # Exact existing selections remain navigable so `add` can move the
+        # frontier through the retained selection set. A target strictly
+        # contained by a larger selection cannot become a distinct Sublime
+        # selection, so continue to exclude those merged targets.
         regions = [
             r
             for r in regions
-            if all(max(r) > max(sel) or min(r) < min(sel) for sel in view.sel())
+            if any(same_region(r, sel) for sel in view.sel())
+            or all(max(r) > max(sel) or min(r) < min(sel) for sel in view.sel())
         ]
 
-    to_show = None
-    for sel in list(view.sel()):
+    targets = []
+    for sel in origins:
         if direction == "next":
-            # use max here to always explore child before parent
-            target = next((r for r in regions if min(sel) < min(r)), None)
+            target = next(
+                (r for r in regions if min(sel) < min(r)),
+                regions[0] if regions else None,
+            )
         else:
             target = next(
                 (
@@ -98,25 +155,18 @@ def select_next_region(view, regions, direction="next", extend=False):
                     # we want to select the content of the `()` where we are
                     or (min(sel) == min(r) and max(sel) < max(r))
                 ),
-                None,
+                regions[0] if regions else None,
             )
 
         if target is not None:
-            if not extend:
-                view.sel().subtract(sel)
-            view.sel().add(target)
-            to_show = target
+            targets.append(target)
 
-    if to_show is not None:
-        view.show(to_show)
-        view.show(sublime.Region(to_show.a, to_show.a))
-
-        view.window().run_command(
-            # Add the new selection in the Jump Back / Next history
-            # (if we execute the same command, it throttles it to 1 second)
-            "add_jump_record",
-            {"selection": [s.to_tuple() for s in view.sel()]},
-        )
+    apply_selection_targets(
+        view,
+        origins,
+        targets,
+        mode=mode,
+    )
 
 
 def clean_charset(charset, case_sensitive):
@@ -125,11 +175,6 @@ def clean_charset(charset, case_sensitive):
     if not case_sensitive:
         charset = charset.lower()
     return list(dict.fromkeys(charset))
-
-
-def get_word_separators(view):
-    word_separators = view.settings().get("word_separators")
-    return word_separators or "./\\()\"'-:,.;<>~!@#$%^&*|+=[]{}`~?"
 
 
 def setting(name, view, default=None):

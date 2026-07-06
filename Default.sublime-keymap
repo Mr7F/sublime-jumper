@@ -96,12 +96,12 @@
     //         "per_file": true,
     //     }
     // },
-    // // Same Selection
+    // // Matching Text
     // {
     //     "keys": [
     //         "alt+ctrl+super+\\"
     //     ],
-    //     "command": "select_next_same_selection",
+    //     "command": "jumper_select_matching_text",
     //     "args": {
     //         "direction": "previous"
     //     },
@@ -110,25 +110,25 @@
     //     "keys": [
     //         "alt+ctrl+super+/"
     //     ],
-    //     "command": "select_next_same_selection",
+    //     "command": "jumper_select_matching_text",
     // },
     // {
     //     "keys": [
     //         "alt+ctrl+shift+super+\\"
     //     ],
-    //     "command": "select_next_same_selection",
+    //     "command": "jumper_select_matching_text",
     //     "args": {
     //         "direction": "previous",
-    //         "keep_selection": true
+    //         "mode": "add"
     //     },
     // },
     // {
     //     "keys": [
     //         "alt+ctrl+shift+super+/"
     //     ],
-    //     "command": "select_next_same_selection",
+    //     "command": "jumper_select_matching_text",
     //     "args": {
-    //         "keep_selection": true
+    //         "mode": "add"
     //     },
     // },
     // // Select Next / Previous: String
@@ -153,7 +153,7 @@
     //     ],
     //     "command": "jumper_select_selector",
     //     "args": {
-    //         "extend": true
+    //         "mode": "add"
     //     }
     // },
     // {
@@ -163,7 +163,7 @@
     //     "command": "jumper_select_selector",
     //     "args": {
     //         "direction": "previous",
-    //         "extend": true
+    //         "mode": "add"
     //     }
     // },
     // // Select Next / Previous: If / Else / Loop / Try / Except
@@ -192,7 +192,7 @@
     //     ],
     //     "command": "jumper_select_selector",
     //     "args": {
-    //         "extend": true,
+    //         "mode": "add",
     //         "selector": "keyword.control.conditional | keyword.control.exception | keyword.control.loop - keyword.control.loop.for.in",
     //     }
     // },
@@ -204,7 +204,7 @@
     //     "args": {
     //         "selector": "keyword.control.conditional | keyword.control.exception | keyword.control.loop - keyword.control.loop.for.in",
     //         "direction": "previous",
-    //         "extend": true
+    //         "mode": "add"
     //     }
     // },
     // // Select Next / Previous: Bracket Content
@@ -229,7 +229,7 @@
     //     ],
     //     "command": "jumper_select_next_bracket",
     //     "args": {
-    //         "extend": true,
+    //         "mode": "add",
     //     }
     // },
     // {
@@ -239,7 +239,7 @@
     //     "command": "jumper_select_next_bracket",
     //     "args": {
     //         "direction": "previous",
-    //         "extend": true
+    //         "mode": "add"
     //     }
     // },
     // //  Select Next / Previous: Constant (int, bool, null, None, etc)
@@ -268,7 +268,7 @@
     //     ],
     //     "command": "jumper_select_selector",
     //     "args": {
-    //         "extend": true,
+    //         "mode": "add",
     //         "selector": "constant.language | constant.numeric",
     //     }
     // },
@@ -280,7 +280,7 @@
     //     "args": {
     //         "selector": "constant.language | constant.numeric",
     //         "direction": "previous",
-    //         "extend": true
+    //         "mode": "add"
     //     }
     // },
     // // Select Next / Previous: Function / Class

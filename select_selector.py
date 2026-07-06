@@ -4,9 +4,7 @@ import sublime_plugin
 from .utils import select_next_region
 
 
-_string_boundary_selector = (
-    "punctuation.definition.string | punctuation.definition.raw"
-)
+_string_boundary_selector = "punctuation.definition.string | punctuation.definition.raw"
 
 
 class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
@@ -21,7 +19,7 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
         edit,
         direction="next",
         selector=None,
-        extend=False,
+        mode="replace",
         trim=False,
         trim_selector=None,
     ):
@@ -54,7 +52,7 @@ class JumperSelectSelectorCommand(sublime_plugin.TextCommand):
         if trim:
             strings = [_trim_whitespace(self.view, region) for region in strings]
 
-        select_next_region(self.view, strings, direction, extend)
+        select_next_region(self.view, strings, direction, mode)
 
 
 def _trim_region_by_selector(view, region, selector):

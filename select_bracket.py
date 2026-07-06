@@ -7,7 +7,7 @@ from .utils import select_next_region
 class JumperSelectNextBracketCommand(sublime_plugin.TextCommand):
     """Select the next / previous bracket / parenthesis content."""
 
-    def run(self, edit, direction="next", extend=False, brackets_text="[({})]"):
+    def run(self, edit, direction="next", mode="replace", brackets_text="[({})]"):
         assert len(brackets_text) % 2 == 0
         opening_bracket = brackets_text[: len(brackets_text) // 2]
         closing_bracket = brackets_text[len(brackets_text) // 2 :]
@@ -39,4 +39,4 @@ class JumperSelectNextBracketCommand(sublime_plugin.TextCommand):
                 pairs.append((opening_region, bracket))
 
         regions = [sublime.Region(a.b, b.a) for a, b in pairs]
-        select_next_region(self.view, regions, direction, extend)
+        select_next_region(self.view, regions, direction, mode)
