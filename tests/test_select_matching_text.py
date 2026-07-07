@@ -24,6 +24,9 @@ class TestDeferrable(DeferrableTestCase):
         self.view.set_scratch(True)
         self.view.assign_syntax("Python.sublime-syntax")
 
+    def tearDown(self):
+        self.view.close()
+
     def test_multiple_matching_text_selections(self):
         yield from self._run_cmd("insert", {"characters": _code})
 
@@ -45,9 +48,7 @@ class TestDeferrable(DeferrableTestCase):
         self.assertEqual(self.view.sel()[2].to_tuple(), (28, 32))
         self.assertEqual(self.view.sel()[3].to_tuple(), (36, 40))
 
-        yield from self._run_cmd(
-            "jumper_select_matching_text", {"mode": "replace"}
-        )
+        yield from self._run_cmd("jumper_select_matching_text", {"mode": "replace"})
         self.assertEqual(len(self.view.sel()), 3)
         self.assertEqual(self.view.sel()[0].to_tuple(), (6, 10))
         self.assertEqual(self.view.sel()[1].to_tuple(), (28, 32))
@@ -59,9 +60,7 @@ class TestDeferrable(DeferrableTestCase):
         # Test word mode
         self.view.sel().clear()
         self.view.sel().add(sublime.Region(33, 33))
-        yield from self._run_cmd(
-            "jumper_select_matching_text", {"mode": "replace"}
-        )
+        yield from self._run_cmd("jumper_select_matching_text", {"mode": "replace"})
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0].to_tuple(), (28, 34))
         self.assertEqual(
@@ -76,9 +75,7 @@ class TestDeferrable(DeferrableTestCase):
             [(28, 34)],
         )
 
-        yield from self._run_cmd(
-            "jumper_select_matching_text", {"mode": "replace"}
-        )
+        yield from self._run_cmd("jumper_select_matching_text", {"mode": "replace"})
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0].to_tuple(), (36, 42))
 
@@ -123,15 +120,11 @@ class TestDeferrable(DeferrableTestCase):
         self.view.sel().clear()
         self.view.sel().add(sublime.Region(28, 31))
 
-        yield from self._run_cmd(
-            "jumper_select_matching_text", {"mode": "replace"}
-        )
+        yield from self._run_cmd("jumper_select_matching_text", {"mode": "replace"})
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0].to_tuple(), (36, 39))
 
-        yield from self._run_cmd(
-            "jumper_select_matching_text", {"mode": "replace"}
-        )
+        yield from self._run_cmd("jumper_select_matching_text", {"mode": "replace"})
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0].to_tuple(), (44, 47))
 

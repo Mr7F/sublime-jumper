@@ -13,6 +13,9 @@ class TestDeferrable(DeferrableTestCase):
         self.view.set_scratch(True)
         self.view.assign_syntax("Python.sublime-syntax")
 
+    def tearDown(self):
+        self.view.close()
+
     def test_select_bracket(self):
         self.view.run_command("insert", {"characters": _code})
 
@@ -90,7 +93,6 @@ class TestDeferrable(DeferrableTestCase):
         )
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0].to_tuple(), (6, 32))
-        self.view.close()
 
     def test_unmatched_brackets_are_ignored(self):
         # An extra trailing closer used to make `stack.pop()` fail.
@@ -103,7 +105,6 @@ class TestDeferrable(DeferrableTestCase):
 
         # The valid pair between the unmatched closers remains selectable.
         self.assertEqual([region.to_tuple() for region in self.view.sel()], [(3, 3)])
-        self.view.close()
 
     def test_brackets_without_an_opener_are_ignored(self):
         # A closer without any opener
@@ -119,4 +120,3 @@ class TestDeferrable(DeferrableTestCase):
             [region.to_tuple() for region in self.view.sel()],
             initial_selection,
         )
-        self.view.close()
