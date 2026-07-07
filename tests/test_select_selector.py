@@ -145,9 +145,7 @@ class TestDeferrable(DeferrableTestCase):
         def frontier_text():
             return [
                 self.view.substr(region)
-                for region in self.view.get_regions(
-                    "jumper-selection-frontier"
-                )
+                for region in self.view.get_regions("jumper-selection-frontier")
             ]
 
         # Start after `a`, select `b`, and add `c`.
@@ -180,12 +178,8 @@ class TestDeferrable(DeferrableTestCase):
         self.view.sel().add(sublime.Region(0))
         self.view.run_command("jumper_select_selector")
 
-        self.assertTrue(
-            self.view.get_regions("jumper-selection-frontier")
-        )
-        self.assertTrue(
-            self.view.get_regions("jumper-selection-frontier-indicators")
-        )
+        self.assertTrue(self.view.get_regions("jumper-selection-frontier"))
+        self.assertTrue(self.view.get_regions("jumper-selection-frontier-indicators"))
 
         # This is the command Sublime runs for a right-arrow key press.
         self.view.run_command(
@@ -203,7 +197,7 @@ class TestDeferrable(DeferrableTestCase):
         )
 
     def test_navigate_nested_f_strings(self):
-        text = 'f"aaaa{\'test1\'}bbb{\'test2\'}ccc{\'test3\'}"'
+        text = "f\"aaaa{'test1'}bbb{'test2'}ccc{'test3'}\""
         self.view.run_command("insert", {"characters": text})
 
         outer = (text.index('"') + 1, text.rindex('"'))
@@ -286,7 +280,6 @@ class TestDeferrable(DeferrableTestCase):
     def test_trim_comment_punctuation_and_whitespace(self):
         text = 'def f():\n    """ hello! """'
         self.view.run_command("insert", {"characters": text})
-        yield 25  # Wait for syntax highlighting.
 
         buffer_text = self.view.substr(sublime.Region(0, self.view.size()))
         expected = buffer_text.index("hello!")
@@ -307,3 +300,33 @@ class TestDeferrable(DeferrableTestCase):
         self.view.run_command("jumper_select_selector", _comment_args)
 
         self.assertEqual(self.view.sel()[0].to_tuple(), (1, 1))
+
+    def test_multi_cursors(self):
+        text = 'def f():\n    a = """ hello! """  # comment\n    "test" # comment 2'
+        self.view.run_command("insert", {"characters": text})
+
+        self.view.sel().clear()
+        self.view.sel().add_all([sublime.Region(12, 12), sublime.Region(32, 32)])
+        sel = self.view.sel()
+        self.assertEqual(len(sel), 2)
+
+        # select next string
+        self.view.run_command("jumper_select_selector")
+        sel = self.view.sel()
+        self.assertEqual(len(sel), 2)
+        self.assertEqual(sel[0].to_tuple(), (24, 32))
+        self.assertEqual(sel[1].to_tuple(), (60, 64))
+
+        # select next comment
+        self.view.run_command("jumper_select_selector", _comment_args)
+        sel = self.view.sel()
+        self.assertEqual(len(sel), 2)
+        self.assertEqual(sel[0].to_tuple(), (39, 46))
+        self.assertEqual(sel[1].to_tuple(), (68, 77))
+
+        # select previous string
+        self.view.run_command("jumper_select_selector", {"direction": "previous"})
+        sel = self.view.sel()
+        self.assertEqual(len(sel), 2)
+        self.assertEqual(sel[0].to_tuple(), (24, 32))
+        self.assertEqual(sel[1].to_tuple(), (60, 64))

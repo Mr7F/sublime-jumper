@@ -1,7 +1,7 @@
 import random
 import statistics
 import time
-from create_label import make_prefix_free_labels
+from .create_label import make_prefix_free_labels
 
 
 def _benchmark_case(name, texts, alphabet="abcdefghijklmnopqrstuvwxyz", repeat=20):
