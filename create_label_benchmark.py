@@ -1,7 +1,7 @@
 import random
 import statistics
 import time
-from .create_label import make_prefix_free_labels
+from create_label import make_prefix_free_labels
 
 
 def _benchmark_case(name, texts, alphabet="abcdefghijklmnopqrstuvwxyz", repeat=20):
@@ -257,8 +257,9 @@ if __name__ == "__main__":
     texts = ["SelectMenu", "SelectMenu", "slots", "static", "String"]
     labels = _assert_labels_valid(texts)
     assert all(label.startswith("s") for label in labels.values())
-    assert labels.get(0) in ("se", "sl", "sc")
-    assert labels.get(1) in ("se", "sl", "sc")
+    # "sm" reads as Select*M*enu since the camelCase boundary boost
+    assert labels.get(0) in ("se", "sm", "sl", "sc")
+    assert labels.get(1) in ("se", "sm", "sl", "sc")
     assert "se" in (labels.get(0), labels.get(1))
     assert labels.get(texts.index("slots")) in ("so", "sl", "st")
     assert labels.get(texts.index("static")) in ("st", "sa")

@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+# AI generated
 
 _SEPARATORS = set("_-.:/\\[](){}\"' ")
 
@@ -17,75 +18,118 @@ def _dedupe(seq):
 
 
 def _item_priority(item, alphabet_set):
-    """Less-specific items go first.
+    """Weakest claims go first.
 
-    The augmenting matcher lets later items steal labels from earlier items.
-    So plain "1" runs before "1a", allowing "1a" to reclaim good labels.
+    The augmenting matcher lets later items steal labels from earlier items,
+    so the last processed item has the strongest claim on its preferred label.
+
+    - Items whose text offers no (or one) useful suffix char run first: they
+      are indifferent, so anything more specific may steal from them
+      (plain "1" runs before "1a", allowing "1a" to reclaim "1a").
+    - The count is capped: beyond "a couple of options" more useful chars do
+      not make a claim weaker, and the cap lets proximity decide instead.
+    - `matches` arrive sorted by distance to the cursor, so a smaller index is
+      a closer match: process it last so it wins contested labels.
     """
     useful_suffix_chars = {c for c in item["text"][1:] if c in alphabet_set}
 
     return (
-        len(useful_suffix_chars),
-        len(item["text"]),
-        item["index"],
+        min(len(useful_suffix_chars), 2),
+        -item["index"],
     )
 
 
 def _matching(items, candidates_by_index, label_count, alphabet_set):
-    """Augmenting-path matching using integer label IDs."""
+    """Augmenting-path matching using integer label IDs.
+
+    Items sharing the same candidates tuple (same "class") are
+    interchangeable: stealing a label from a same-class owner just swaps two
+    identical roles and never improves the outcome. So each class keeps a
+    persistent watermark: the prefix of its candidate list observed to be
+    owned by class members, which every search skips.
+
+    The watermark only ever advances. A later cross-class steal can punch a
+    hole below it; skipping the hole is harmless for quality (the hole's new
+    owner out-prioritized us) and completeness is restored by the full-rescan
+    fallback below.
+    """
     owner_by_label = [-1] * label_count
     label_by_index = {}
+
+    # Intern the candidate tuples: the cache in `_match_bucket` guarantees
+    # items with equal candidates share one tuple object.
+    tid_by_obj = {}
+    tuples = []
+    tid_by_index = {}
+
+    for index, cand in candidates_by_index.items():
+        key = id(cand)
+        tid = tid_by_obj.get(key)
+
+        if tid is None:
+            tid = len(tuples)
+            tid_by_obj[key] = tid
+            tuples.append(cand)
+
+        tid_by_index[index] = tid
+
+    ntuples = len(tuples)
+    watermark = [0] * ntuples
 
     seen = [0] * label_count
     seen_token = 0
 
-    def visit(start_index, cursor_by_candidates):
+    def visit(start_index, cursors):
         # Stack of pending reassignments:
         # if the search succeeds, each `(index, label_id)` is applied while
         # unwinding, just like the recursive version.
+        # `cursors` holds one scan position per class, shared by every item
+        # of that class touched during this search.
         stack = []
         index = start_index
+        tid = tid_by_index[index]
 
         while True:
-            candidates = candidates_by_index[index]
-            candidates_key = id(candidates)
-
-            pos = cursor_by_candidates.get(candidates_key, 0)
+            candidates = tuples[tid]
+            n = len(candidates)
+            pos = cursors[tid]
             descended = False
 
-            while pos < len(candidates):
+            while pos < n:
                 label_id = candidates[pos]
                 pos += 1
-                cursor_by_candidates[candidates_key] = pos
 
                 if seen[label_id] == seen_token:
                     continue
 
                 seen[label_id] = seen_token
-
                 old_owner = owner_by_label[label_id]
+                cursors[tid] = pos
 
                 if old_owner == -1:
-                    # Found a free label. Assign it to the current item.
+                    # Found a free label. Assign it to the current item,
+                    # then reassign the path back to the start item.
                     owner_by_label[label_id] = index
                     label_by_index[index] = label_id
 
-                    # Reassign the path back to the start item.
                     while stack:
-                        previous_index, previous_label_id = stack.pop()
-                        owner_by_label[previous_label_id] = previous_index
-                        label_by_index[previous_index] = previous_label_id
+                        prev_index, prev_label_id = stack.pop()
+                        owner_by_label[prev_label_id] = prev_index
+                        label_by_index[prev_index] = prev_label_id
 
                     return True
 
                 # Try to move the old owner somewhere else.
                 stack.append((index, label_id))
                 index = old_owner
+                tid = tid_by_index[index]
                 descended = True
                 break
 
             if descended:
                 continue
+
+            cursors[tid] = pos
 
             # Current item could not be moved. Backtrack to the previous item
             # and continue after the label that led here.
@@ -93,6 +137,33 @@ def _matching(items, candidates_by_index, label_count, alphabet_set):
                 return False
 
             index, _label_id = stack.pop()
+            tid = tid_by_index[index]
+
+    def redistribute():
+        """Give the best label of each class to its closest member.
+
+        Class members are interchangeable during matching, so which member
+        got which label is arbitrary. Their texts are identical, only
+        proximity distinguishes them: smaller index = closer to the cursor.
+        """
+        members_by_tid = {}
+
+        for index, tid in tid_by_index.items():
+            members_by_tid.setdefault(tid, []).append(index)
+
+        for tid, members in members_by_tid.items():
+            if len(members) < 2:
+                continue
+
+            rank = {label_id: pos for pos, label_id in enumerate(tuples[tid])}
+            owned = sorted(
+                (label_by_index[index] for index in members),
+                key=rank.__getitem__,
+            )
+
+            for index, label_id in zip(sorted(members), owned):
+                label_by_index[index] = label_id
+                owner_by_label[label_id] = index
 
     order = [
         item["index"]
@@ -103,24 +174,65 @@ def _matching(items, candidates_by_index, label_count, alphabet_set):
     ]
 
     for index in order:
-        seen_token += 1
-        cursor_by_candidates = {}
+        tid = tid_by_index[index]
+        cand = tuples[tid]
+        w = watermark[tid]
+        n = len(cand)
 
-        if not visit(index, cursor_by_candidates):
-            return None
+        # Advance the class watermark past labels owned by classmates.
+        while w < n:
+            o = owner_by_label[cand[w]]
+
+            if o == -1 or tid_by_index[o] != tid:
+                break
+
+            w += 1
+
+        watermark[tid] = w
+
+        seen_token += 1
+
+        if not visit(index, watermark[:]):
+            # Safety net: full rescan without the watermark shortcut.
+            seen_token += 1
+
+            if not visit(index, [0] * ntuples):
+                return None
+
+    redistribute()
 
     return label_by_index
 
 
-def _suffix_chars_for_text(text, alphabet, alphabet_set):
+def _word_boundaries(original):
+    """Positions starting a new word, on the original (pre-lowercase) text.
+
+    For:
+        on_dragStart
+
+    this gives the positions of `d` and `S`: after a separator or at a
+    camelCase hump.
+    """
+    positions = []
+
+    for i in range(1, len(original)):
+        if original[i - 1] in _SEPARATORS or (
+            original[i].isupper() and not original[i - 1].isupper()
+        ):
+            positions.append(i)
+
+    return positions
+
+
+def _suffix_chars_for_text(text, boundaries, alphabet, alphabet_set):
     """
     Preferred second/third/etc chars for a label.
 
     For:
-        example
+        exampleWord
 
     this gives roughly:
-        x, a, m, p, l, e, ...
+        x, w, a, m, p, l, e, ...
 
     Then it falls back to the whole alphabet.
     """
@@ -136,10 +248,9 @@ def _suffix_chars_for_text(text, alphabet, alphabet_set):
     if len(text) >= 2:
         add(text[1])
 
-    # Useful token chars: f + e from for_example
-    for i in range(1, len(text)):
-        if text[i - 1] in _SEPARATORS:
-            add(text[i])
+    # Word-start chars: f + e from for_example, o + d from onDrag
+    for i in boundaries:
+        add(text[i])
 
     # Any later character in the word
     for c in text[1:]:
@@ -152,23 +263,35 @@ def _suffix_chars_for_text(text, alphabet, alphabet_set):
     return chars
 
 
-def _char_costs_for_text(text, alphabet_pos):
+def _char_costs_for_text(text, boundaries, alphabet_pos):
     """
-    Precompute per-char costs for one text.
+    Precompute per-char costs for one text. Smaller is better.
 
-    This replaces repeated:
-
-        text.find(c, 1)
-
-    inside candidate sorting.
+    The immediate next char stays the best choice ("se" for "select"),
+    then chars starting a word: "DomainSelectorDialog" reads better as
+    "ds" than as "dm". Other chars cost their position in the text, and
+    chars absent from the text fall back to the alphabet order.
     """
     costs = {c: 1000 + pos for c, pos in alphabet_pos.items()}
-
     seen = set()
+
+    if len(text) >= 2 and text[1] in costs:
+        costs[text[1]] = 1
+        seen.add(text[1])
+
+    for nth, i in enumerate(boundaries):
+        c = text[i]
+
+        if c in costs and c not in seen:
+            costs[c] = 2 + nth
+            seen.add(c)
+
+    # Plain chars never cost less than the boundary chars.
+    floor = 2 + len(boundaries)
 
     for pos, c in enumerate(text[1:], start=1):
         if c in costs and c not in seen:
-            costs[c] = pos
+            costs[c] = max(pos, floor)
             seen.add(c)
 
     return costs
@@ -180,7 +303,7 @@ def _label_cost(label_info, char_costs):
 
     Prefer:
     - shorter labels
-    - chars that appear earlier in the matched text
+    - chars that appear earlier in the matched text (word starts first)
     - alphabet order as fallback
     """
     _label_id, label, label_len, suffix = label_info
@@ -259,16 +382,18 @@ def _match_bucket(bucket, leaf_pool, alphabet_set):
     candidates_cache = {}
 
     for item in bucket:
-        # Many pathological cases have hundreds of identical texts like "1".
-        # Their sorted candidate lists are identical, so compute once.
-        candidates = candidates_cache.get(item["text"])
+        # Key the cache by the char-cost signature, not the text:
+        # identical texts share it, but so do "Component0" and "Component7",
+        # which differ only in chars outside the alphabet. The shared tuple
+        # object is also what `_matching` uses to group interchangeable items.
+        candidates = candidates_cache.get(item["cost_sig"])
 
         if candidates is None:
             candidates = _candidate_label_ids(
                 leaf_infos,
                 item,
             )
-            candidates_cache[item["text"]] = candidates
+            candidates_cache[item["cost_sig"]] = candidates
 
         candidates_by_index[item["index"]] = candidates
 
@@ -301,14 +426,23 @@ def make_prefix_free_labels(texts, alphabet, case_sensitive=True):
         if not text:
             continue
 
+        # Word boundaries come from the original text: lowercasing first
+        # would erase the camelCase humps.
+        original = text
+
         if not case_sensitive:
             text = text.lower()
 
-        char_costs = char_costs_cache.get(text)
+        cached = char_costs_cache.get(original)
 
-        if char_costs is None:
-            char_costs = _char_costs_for_text(text, alphabet_pos)
-            char_costs_cache[text] = char_costs
+        if cached is None:
+            boundaries = _word_boundaries(original)
+            char_costs = _char_costs_for_text(text, boundaries, alphabet_pos)
+            cost_sig = tuple(char_costs[c] for c in alphabet)
+            cached = (char_costs, cost_sig, boundaries)
+            char_costs_cache[original] = cached
+
+        char_costs, cost_sig, boundaries = cached
 
         items.append(
             {
@@ -316,6 +450,8 @@ def make_prefix_free_labels(texts, alphabet, case_sensitive=True):
                 "text": text,
                 "first": text[0],
                 "char_costs": char_costs,
+                "cost_sig": cost_sig,
+                "boundaries": boundaries,
             }
         )
 
@@ -341,6 +477,7 @@ def make_prefix_free_labels(texts, alphabet, case_sensitive=True):
             chars.extend(
                 _suffix_chars_for_text(
                     item["text"],
+                    item["boundaries"],
                     alphabet,
                     alphabet_set,
                 )
@@ -361,4 +498,3 @@ def make_prefix_free_labels(texts, alphabet, case_sensitive=True):
         )
 
     return labels
-
