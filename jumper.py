@@ -1,13 +1,13 @@
 import html
+from collections import Counter
 
 import sublime
 import sublime_plugin
 
-from .create_label import make_prefix_free_labels
 from .utils import (
-    JumperLabel,
     clean_charset,
     get_next_element,
+    jump_to,
     setting,
 )
 
@@ -19,9 +19,21 @@ active_jumper_by_window = {}
 
 
 class JumperCommand(sublime_plugin.TextCommand):
-    """Highlight all the characters visible on the screen, with a letter for each, press that letter to jump to the position.
+    """Highlight the matches visible on the screen with a one-letter label.
+
+    Typing either narrows the matches (the typed text must match the start of
+    their text) or jumps to a match (when the typed character is its label),
+    like flash.nvim: a character that can continue the search of a match is
+    never used as a label, so the two are always unambiguous. Narrowing down
+    to a single match jumps immediately, and when the next character of a
+    match already narrows down to it, that character is shown as its jump
+    char instead of a label.
+
+    The labels are visible as soon as the command starts: the first letter of
+    each match stays readable, its label is shown right after it.
 
     Similar package:
+    > https://github.com/folke/flash.nvim
     > https://packagecontrol.io/packages/EasyMotion
     > https://github.com/ice9js/ace-jump-sublime
     > https://github.com/jfcherng-sublime/ST-AceJump-Chinese
@@ -34,6 +46,8 @@ class JumperCommand(sublime_plugin.TextCommand):
         self.extend = int(extend)
         self.search_regex = regex
         self.current_line = current_line
+        self.search = ""
+        self.sticky_labels = {}
 
         self.case_sensitive = setting("jumper_case_sensitive", self.view)
         self.charset = clean_charset(
@@ -57,7 +71,8 @@ class JumperCommand(sublime_plugin.TextCommand):
         sheets_per_view.clear()
 
         self.exit = False
-        self._init_labels()
+        self.matches = {view: self._find_match(view) for view in views}
+        self._assign_labels()
         self._show_labels()
 
         input_view = window.show_input_panel(
@@ -104,7 +119,7 @@ class JumperCommand(sublime_plugin.TextCommand):
 
         return True
 
-    def _find_match(self, view) -> "list[sublime.Region]":
+    def _find_match(self, view) -> "list[tuple[sublime.Region, str]]":
         visible_region = views[view]
 
         cursor = (
@@ -123,43 +138,90 @@ class JumperCommand(sublime_plugin.TextCommand):
         matches = view.find_all(self.search_regex, flags, within=search_region)
 
         matches = sorted(matches, key=lambda x: abs(x.begin() - cursor))
-        # More matches than two-characters labels would be unusable anyway
-        return matches[: len(self.charset) ** 2]
+        # Rendering more matches than that would be unusable anyway
+        matches = matches[: len(self.charset) ** 2]
 
-    def _init_labels(self):
-        """Create the labels for the current regex, unique across all the views."""
-        matches = [
-            (view, region) for view in views for region in self._find_match(view)
+        texts = [view.substr(region) for region in matches]
+        if not self.case_sensitive:
+            texts = [text.lower() for text in texts]
+
+        return list(zip(matches, texts))
+
+    def _assign_labels(self):
+        """flash.nvim-style labels for the matches narrowed by the search.
+
+        The search matches the start of the text of a match. A character that
+        can still continue the search of a match is never used as a label, so
+        typing it always narrows instead of jumping. When the next character
+        of a match cannot continue any other match, typing it narrows down to
+        that single match and jumps: that character becomes the jump char of
+        the match, no label is needed. The remaining charset goes to the
+        closest matches first, keeping the label a match got on the previous
+        keystrokes; when the charset runs out, the extra matches stay
+        unlabelled until the search narrows them down.
+        """
+        search_len = len(self.search)
+        matched = [
+            (view, region, text[search_len : search_len + 1])
+            for view, matches in self.matches.items()
+            for region, text in matches
+            if text.startswith(self.search)
         ]
 
-        labels = make_prefix_free_labels(
-            texts=[view.substr(region) for view, region in matches],
-            alphabet=self.charset,
-            case_sensitive=self.case_sensitive,
-        )
+        counts = Counter(next_char for _view, _region, next_char in matched)
+        pool = [c for c in self.charset if c not in counts]
 
-        self.positions: "dict[View, dict[str, JumperLabel]]" = {
-            view: {} for view in views
-        }
-        for i, (view, region) in enumerate(matches):
-            label = labels.get(i)
-            if label is not None:
-                self.positions[view][label] = JumperLabel(region)
+        # A next char that only one match can follow is its jump char
+        matched = [
+            (view, region, next_char if next_char and counts[next_char] == 1 else "")
+            for view, region, next_char in matched
+        ]
 
-    def _show_labels(self, label_search=""):
-        for view, values in self.positions.items():
+        labels = {}
+        for view, region, jump_char in matched:
+            key = (view.id(), region.a)
+            sticky = self.sticky_labels.get(key)
+            if not jump_char and sticky in pool:
+                pool.remove(sticky)
+                labels[key] = sticky
+
+        for view, region, jump_char in matched:
+            key = (view.id(), region.a)
+            if not jump_char and key not in labels and pool:
+                labels[key] = self.sticky_labels[key] = pool.pop(0)
+
+        # Keep the first letter of the word readable when nothing is typed
+        # yet: the label is shown on the second letter
+        gap = 0 if self.search else 1
+
+        self.targets = []
+        self.narrowed = {view: [] for view in self.matches}
+        self.positions = {view: {} for view in self.matches}
+        for view, region, jump_char in matched:
+            self.targets.append((view, region))
+
+            if jump_char:
+                self.narrowed[view].append((region.a, region.b, jump_char, 0))
+                continue
+
+            label = labels.get((view.id(), region.a))
+            self.narrowed[view].append((region.a, region.b, label, gap if label else 0))
+            if label:
+                self.positions[view][label] = region
+
+    def _show_labels(self):
+        for view, matches in self.narrowed.items():
             if self.extend and view != self.view:
                 # The "extend" modes cannot work cross-view
-                values = {}
+                matches = []
 
             view.run_command(
                 "select_char_selection_add_labels",
                 {
                     "positions": [
-                        (c, label.region.a, label.region.b)
-                        for c, label in values.items()
+                        (label or "", a, b, gap) for a, b, label, gap in matches
                     ],
-                    "label_search": label_search,
+                    "search_length": len(self.search),
                     "extend": self.extend,
                 },
             )
@@ -175,47 +237,62 @@ class JumperCommand(sublime_plugin.TextCommand):
         return sorted(views, key=lambda v: v != self.view)
 
     def on_change(self, value):
-        label_search = value
+        if not self.case_sensitive:
+            value = value.lower()
 
-        target_view, jump = next(
-            (
-                (view, values[label_search])
-                for view, values in self.positions.items()
-                if label_search in values
-                # The "extend" modes cannot work cross-view
-                and (not self.extend or view == self.view)
-            ),
-            (None, None),
-        )
+        if not value.startswith(self.search):
+            # Backspace or an edit: replay the narrowing from the new text
+            self.search = ""
+            self._assign_labels()
 
-        if jump is not None:
-            self.on_cancel()
+        for char in value[len(self.search) :]:
+            target = self._label_target(char)
+            if target is not None:
+                self._jump(*target)
+                return
 
-        if not label_search:
-            self._show_labels(label_search)
-            return
+            self.search += char
+            self._assign_labels()
 
-        if jump is not None:
-            self.view.window().focus_view(target_view)
+            # A single match left: no need to type its label
+            if len(self.targets) == 1:
+                view, region = self.targets[0]
+                if not self.extend or view == self.view:
+                    self._jump(view, region)
+                    return
 
-            selection = list(target_view.sel())
-            if not selection and not self.extend:
-                selection = [target_view.visible_region()]
+        self._show_labels()
 
-            if self.extend != 3:
-                target_view.sel().clear()
+    def _label_target(self, char):
+        for view, values in self.positions.items():
+            # The "extend" modes cannot work cross-view
+            if char in values and (not self.extend or view == self.view):
+                return view, values[char]
 
-            for sel in selection:
-                jump.jump_to(
-                    target_view,
-                    sel,
-                    self.extend in (1, 2),
-                    self.extend == 2,
-                )
+        return None
 
-            target_view.show(target_view.sel()[0])
-        else:
-            self._show_labels(label_search)
+    def _jump(self, target_view, region):
+        self.on_cancel()
+
+        self.view.window().focus_view(target_view)
+
+        selection = list(target_view.sel())
+        if not selection and not self.extend:
+            selection = [target_view.visible_region()]
+
+        if self.extend != 3:
+            target_view.sel().clear()
+
+        for sel in selection:
+            jump_to(
+                target_view,
+                region,
+                sel,
+                self.extend in (1, 2),
+                self.extend == 2,
+            )
+
+        target_view.show(target_view.sel()[0])
 
     def on_cancel(self, *args, restore_focus=True, **kwargs):
         if self.exit:
@@ -247,13 +324,13 @@ class JumperCommand(sublime_plugin.TextCommand):
 
     def reset_mode(self):
         self.extend = 0
-        self._show_labels("")
+        self._show_labels()
 
 
 class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
     """Do those modifications in a command, to easily undo it once we are done."""
 
-    def run(self, edit, positions, label_search, extend):
+    def run(self, edit, positions, search_length, extend):
         visible_region = views.get(self.view) or self.view.visible_region()
 
         text = self.view.export_to_html(visible_region, minihtml=True)
@@ -273,81 +350,72 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
         )
 
         style = self.view.style()
+        label_color = (
+            {1: style["yellowish"], 2: style["bluish"], 3: style["greenish"]}
+        ).get(int(extend), style["orangish"])
+
+        highlight_style = {
+            "background-color": style["inactive_selection"],
+            "border-radius": "5px",
+        }
 
         positions = sorted(positions, key=lambda x: x[1], reverse=True)
-        for i, (label, a, b) in enumerate(positions):
+        for label, a, b, gap in positions:
             html_position = html_positions.get(a - offset_region)
             if not html_position:
                 continue
 
-            color = (
-                ({1: style["yellowish"], 2: style["bluish"], 3: style["greenish"]}).get(
-                    int(extend), style["pinkish"]
-                )
-                if label.startswith(label_search)
-                else style["caret"]
-            )
-
-            background_style = {
-                "background-color": style["inactive_selection"],
-                "border-radius": "5px",
-            }
-
             start, _ = html_position
 
-            visible_label_max_width = max(b - a, 1)
-            visible_label, borders, visible_label_index = self.visible_label_for(
-                label,
-                label_search,
-                visible_label_max_width,
+            # The label never overflows the word: when the search reaches its
+            # end, the label replaces the last letter of the word
+            prefix_count = search_length
+            if label and a + prefix_count + gap >= b:
+                if gap:
+                    gap = 0
+                else:
+                    prefix_count -= 1
+
+            # HTML sizes of the matched prefix, of the characters kept as-is
+            # before the label, and of the character covered by the label.
+            # Tags are never replaced (eg `<br>` when the label lands at the
+            # end of the line), the label is only inserted before them.
+            prefix_size = self._html_size(text, start, prefix_count)
+            keep_size = self._html_size(text, start + prefix_size, gap)
+            label_size = (
+                self._html_size(text, start + prefix_size + keep_size, 1)
+                if label
+                else 0
             )
 
-            # HTML length of the text replaced by the label. Tags are never
-            # replaced (eg `<br>` when jumping to the end of the line), the
-            # label is only inserted before them.
-            consumed = 0
-            covered = 0
-            while covered < len(visible_label) and start + consumed < len(text):
-                if text[start + consumed] == "<":
-                    break
-                html_size, text_size = get_next_element(text, start + consumed)
-                consumed += html_size
-                covered += text_size
+            replacement = ""
+            if prefix_size:
+                replacement += make_element(
+                    "span",
+                    text[start : start + prefix_size],
+                    highlight_style,
+                    True,
+                )
 
-            borders_style = {}
-            if borders >= 1:
-                borders_style["border-radius"] = "0px"
-                borders_style["padding-right"] = "-1px"
-                borders_style["border-right"] = f"1px solid {color}"
-            if borders >= 2:
-                borders_style["padding-top"] = "-1px"
-                borders_style["border-top"] = f"1px solid {color}"
-            if borders >= 3:
-                borders_style["padding-left"] = "-1px"
-                borders_style["border-left"] = f"1px solid {color}"
-            if borders >= 4:
-                borders_style["padding-bottom"] = "-1px"
-                borders_style["border-bottom"] = f"1px solid {color}"
+            replacement += text[start + prefix_size : start + prefix_size + keep_size]
 
-            base_label_style = {
-                "color": color,
-                "font-style": "normal",
-                "font-weight": "bold",
-            }
+            if label:
+                replacement += make_element(
+                    "span",
+                    label,
+                    {
+                        "color": label_color,
+                        "font-style": "normal",
+                        "font-weight": "bold",
+                        **highlight_style,
+                    },
+                )
 
-            visible_label_html = ""
-            for i, char in enumerate(visible_label):
-                char_style = dict(base_label_style)
-
-                if i == len(visible_label) - 1:
-                    char_style.update(borders_style)
-
-                if i == visible_label_index:
-                    char_style.update(background_style)
-
-                visible_label_html += make_element("span", char, char_style)
-
-            text = text[:start] + visible_label_html + text[start + consumed :]
+            text = (
+                text[:start]
+                + replacement
+                + text[start + prefix_size + keep_size + label_size :]
+            )
 
         offset = 1  # Adjust, so the text don't move
         text += "<style>html, body {padding: 0px; margin: 0px}</style>"
@@ -513,49 +581,19 @@ class SelectCharSelectionAddLabelsCommand(sublime_plugin.TextCommand):
         return points
 
     @staticmethod
-    def visible_label_for(label, typed, width):
-        """Build the label that we will show in the editor.
+    def _html_size(text, start, char_count):
+        """HTML size covering `char_count` buffer characters from `start`."""
+        size = 0
+        covered = 0
 
-        :param label: the label corresponding to the word
-        :param typed: what the user typed
-        :param width: the size of the word
-            (visible label cannot exceed that size)
-        :return:
-            - the visible label to show at the start of the word
-            - the number of chars we couldn't show on the right
-            - the index in the visible label of the next char that we need to type
-        """
-        width = max(width, 1)
-        label_matches = label.startswith(typed)
-
-        matched = 0
-        for a, b in zip(typed, label):
-            if a != b:
+        while covered < char_count and start + size < len(text):
+            if text[start + size] == "<":
                 break
-            matched += 1
+            html_size, text_size = get_next_element(text, start + size)
+            size += html_size
+            covered += text_size
 
-        if len(label) <= width:
-            visible_label_index = (
-                matched if label_matches and matched < len(label) else None
-            )
-            return label, 0, visible_label_index
-
-        # Scroll the visible window as the user types, but never past the end.
-        visible_start = min(matched, len(label) - width)
-        visible_end = visible_start + width
-
-        visible_label = label[visible_start:visible_end]
-        borders = (len(label) - visible_end) if label_matches else 0
-
-        # Index of the character inside the visible label we need to type next.
-        # If the label is already fully typed, there is no next character.
-        visible_label_index = None
-        if label_matches and matched < len(label):
-            visible_label_index = matched - visible_start
-            if not 0 <= visible_label_index < len(visible_label):
-                visible_label_index = None
-
-        return visible_label, borders, visible_label_index
+        return size
 
 
 class SelectCharSelectionRemoveLabelsCommand(sublime_plugin.TextCommand):
@@ -577,9 +615,7 @@ class JumperInputSetModeCommand(sublime_plugin.TextCommand):
         else:
             jumper.extend = extend
 
-        label_search = self.view.substr(sublime.Region(0, self.view.size()))
-
-        jumper._show_labels(label_search)
+        jumper._show_labels()
 
 
 class JumperInputListener(sublime_plugin.EventListener):

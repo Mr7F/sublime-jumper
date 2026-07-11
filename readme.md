@@ -2,7 +2,7 @@
 
 ## Go To Anywhere
 
-Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMotion) and [Ace Jump](https://github.com/acejump/AceJump), press a shortcut to label every match of a regex visible on the screen. Typing the label jumps to that position.
+Taking inspiration from [EasyMotion](https://github.com/tednaleid/sublime-EasyMotion), [Ace Jump](https://github.com/acejump/AceJump) and [flash.nvim](https://github.com/folke/flash.nvim), press a shortcut to label the matches of a regex visible on the screen. Type the label of a match to jump to it, or narrow the matches by typing the beginning of their text.
 
 While the labels are shown, you can switch mode:
 
@@ -35,7 +35,13 @@ While the labels are shown, you can switch mode:
 
 The `extend` argument selects the initial mode: `1` selects up to the target but excludes it, `2` includes the target, and `3` adds a cursor at the target.
 
-The labels are **derived from the matched text**: a match starting with a unique letter is labelled by that letter, so typing the first letter of your target usually jumps there directly. When several matches start with the same letter, longer labels are generated (preferring the following characters of the matched text).
+The labels are computed like flash.nvim: a character that can continue the search of a match is **never used as a label**, so typing it always narrows the matches instead of jumping. The remaining characters label the matches closest to the cursor first, and a match keeps its label while you type. When there are more matches than available characters, the extra matches are only highlighted: type more characters of their text to narrow them down until they get a label.
+
+The labels are visible as soon as the command starts: the first letter of each match stays readable, its label is shown right after it.
+
+When a single match is left, it jumps immediately. And when the next character of a match already narrows down to it, that character is shown as its jump char instead of a label: just keep typing the word.
+
+The label never overflows its match: when the search reaches the end of the word, the label replaces its last letter.
 
 You can change the character set used for labels, listing preferred characters first. Whitespace, "`enter`", "`tab`", and "`|`" are reserved for switching modes and cannot be used:
 
@@ -56,13 +62,6 @@ Taking inspiration from [Quick Scope](https://github.com/unblevable/quick-scope)
 With `jumper_escalate_line_to_screen`, pressing the "current line" shortcut a second time re-executes the command on the whole screen instead of only the current line.
 
 Set `jumper_case_sensitive` to `true` to make searches and labels case-sensitive. The default is `false`.
-
-When a label has more characters than the matched text can display, borders are shown around the last visible character. They will disappear while you type the label.
-
-<p align="center">
-  <img src="img/demo_borders.gif">
-</p>
-
 
 ## Technical
 Sublime text doesn't support "phantom on top of text", so the default implementation use HTML sheet.

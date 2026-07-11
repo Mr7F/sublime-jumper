@@ -29,40 +29,27 @@ def get_next_element(html, index):
     return 1, 1
 
 
-class JumperLabel:
-    def __init__(self, region):
-        """Represent a label in the editor where we can jump to.
+def jump_to(view, region, cursor_region, extend, included):
+    """Jump to the target region.
 
-        :param region: The region where we can jump / select
-        """
-        self.region = region
+    :param view: View in which the jump will happen
+    :param region: The region where we jump / select
+    :param cursor_region: The cursor region from which we jump
+    :param extend: True if we should extend the selection
+    :param included: Used when `extend == True`, to know if we should
+        include the target region in the selection or not
+    """
+    if not extend:
+        # Jump before the region
+        view.sel().add(sublime.Region(region.a, region.a))
+        return
 
-    def jump_to(self, view, cursor_region, extend, included):
-        """Jump to the target region.
+    cursor_a, cursor_b = sorted(cursor_region.to_tuple())
 
-        :param view: View in which the jump will happen
-        :param cursor_region: The cursor region from which we will jump
-        :param extend: True if we should extend the selection
-        :param included: Used when `extend == True`, used so know if we should
-            include the target region in the selection or not
-        """
-        if not extend:
-            # Jump before the region
-            view.sel().add(sublime.Region(self.region.a, self.region.a))
-            return
-
-        cursor_a, cursor_b = sorted(cursor_region.to_tuple())
-
-        if self.region.a < cursor_a:
-            if included:
-                view.sel().add(sublime.Region(cursor_b, self.region.a))
-            else:
-                view.sel().add(sublime.Region(cursor_b, self.region.b))
-        else:
-            if included:
-                view.sel().add(sublime.Region(cursor_a, self.region.b))
-            else:
-                view.sel().add(sublime.Region(cursor_a, self.region.a))
+    if region.a < cursor_a:
+        view.sel().add(sublime.Region(cursor_b, region.a if included else region.b))
+    else:
+        view.sel().add(sublime.Region(cursor_a, region.b if included else region.a))
 
 
 def apply_selection_targets(
