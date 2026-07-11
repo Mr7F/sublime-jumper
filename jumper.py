@@ -29,8 +29,9 @@ class JumperCommand(sublime_plugin.TextCommand):
     match already narrows down to it, that character is shown as its jump
     char instead of a label.
 
-    The labels are visible as soon as the command starts: the first letter of
-    each match stays readable, its label is shown right after it.
+    The labels are visible as soon as the command starts: each match shows
+    its first letter followed by the label it will have once that letter is
+    typed, so the whole key sequence is readable right away.
 
     Similar package:
     > https://github.com/folke/flash.nvim
@@ -159,13 +160,47 @@ class JumperCommand(sublime_plugin.TextCommand):
         closest matches first, keeping the label a match got on the previous
         keystrokes; when the charset runs out, the extra matches stay
         unlabelled until the search narrows them down.
+
+        With an empty search, the labels are computed per first-letter group,
+        as if that letter was already typed, and only previewed: typing the
+        first letter then shows the same labels, in the same place, for real.
         """
-        search_len = len(self.search)
         matched = [
-            (view, region, text[search_len : search_len + 1])
+            (view, region, text)
             for view, matches in self.matches.items()
             for region, text in matches
             if text.startswith(self.search)
+        ]
+
+        self.targets = [(view, region) for view, region, _text in matched]
+        self.narrowed = {view: [] for view in self.matches}
+        self.positions = {view: {} for view in self.matches}
+
+        if self.search:
+            self._label_matches(matched)
+            return
+
+        # At rest, preview for each match the label it will have once its
+        # first letter is typed, so the whole key sequence is readable right
+        # away. The previewed labels are not typable yet: the first key
+        # always narrows.
+        groups = {}
+        for match in matched:
+            groups.setdefault(match[2][:1], []).append(match)
+
+        for group in groups.values():
+            if len(group) == 1:
+                # A single match: its first letter narrows down to it and jumps
+                view, region, text = group[0]
+                self.narrowed[view].append((region.a, region.b, text[:1], 0))
+            else:
+                self._label_matches(group, preview=True)
+
+    def _label_matches(self, matched, preview=False):
+        search_len = 1 if preview else len(self.search)
+        matched = [
+            (view, region, text[search_len : search_len + 1])
+            for view, region, text in matched
         ]
 
         counts = Counter(next_char for _view, _region, next_char in matched)
@@ -190,23 +225,17 @@ class JumperCommand(sublime_plugin.TextCommand):
             if not jump_char and key not in labels and pool:
                 labels[key] = self.sticky_labels[key] = pool.pop(0)
 
-        # Keep the first letter of the word readable when nothing is typed
-        # yet: the label is shown on the second letter
-        gap = 0 if self.search else 1
+        # The preview sits after the first letter, keeping it readable
+        gap = int(preview)
 
-        self.targets = []
-        self.narrowed = {view: [] for view in self.matches}
-        self.positions = {view: {} for view in self.matches}
         for view, region, jump_char in matched:
-            self.targets.append((view, region))
-
             if jump_char:
-                self.narrowed[view].append((region.a, region.b, jump_char, 0))
+                self.narrowed[view].append((region.a, region.b, jump_char, gap))
                 continue
 
             label = labels.get((view.id(), region.a))
             self.narrowed[view].append((region.a, region.b, label, gap if label else 0))
-            if label:
+            if label and not preview:
                 self.positions[view][label] = region
 
     def _show_labels(self):

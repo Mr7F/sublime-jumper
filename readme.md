@@ -37,7 +37,7 @@ The `extend` argument selects the initial mode: `1` selects up to the target but
 
 The labels are computed like flash.nvim: a character that can continue the search of a match is **never used as a label**, so typing it always narrows the matches instead of jumping. The remaining characters label the matches closest to the cursor first, and a match keeps its label while you type. When there are more matches than available characters, the extra matches are only highlighted: type more characters of their text to narrow them down until they get a label.
 
-The labels are visible as soon as the command starts: the first letter of each match stays readable, its label is shown right after it.
+The labels are visible as soon as the command starts: each match shows its first letter followed by the label it will have once that letter is typed, so the whole key sequence can be read before typing. The first key always narrows the search; the label becomes typable right after, at the same place.
 
 When a single match is left, it jumps immediately. And when the next character of a match already narrows down to it, that character is shown as its jump char instead of a label: just keep typing the word.
 
