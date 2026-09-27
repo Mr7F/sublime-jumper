@@ -41,6 +41,9 @@ class JumperCommand(sublime_plugin.TextCommand):
             self.case_sensitive,
         )
 
+        if not self.charset:
+            return
+
         window = self.view.window()
         active_jumper_by_window[window.id()] = self
 
